@@ -2,6 +2,7 @@ package fr.vyraah.oneblock.SQL;
 
 import fr.vyraah.oneblock.Main;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
 import java.sql.*;
@@ -16,12 +17,6 @@ public class MySQL {
     // =========================================================================================
 
     public static boolean getPlayerHaveAnIsland(Player p){
-
-        // ICI TU VAS VERIFIER SI LE JOUEUR EST DEJA DANS UNE ILE (Donc dans une liste, dans la db tu vas get toutes les iles).
-        // SI IL N'EST PAS DEDANS TU AURAS JUSTE A RETURN FALSE;
-        // SINON
-        // TU RETURN TRUE ET TU APPELLES LA VARIABLE DANS TA CLASSE ONEBLOCK.JAVA DE TA CMD
-
         try{
             Connection con = Main.INSTANCE.mysql.getConnection();
             ResultSet result = con.createStatement().executeQuery("SELECT * FROM t_user;");
@@ -63,6 +58,63 @@ public class MySQL {
         return i;
     }
 
+    public static boolean isPlayerOnHisIsland(Player p){
+        return isLocationIsInPlayerIsland(p, p.getLocation());
+    }
+
+    public static boolean isLocationIsInPlayerIsland(Player p, Location loc){
+        if(!loc.getWorld().getName().equals("islands")) return false;
+        int x = getInformationByNameInt(getIslandNameByPlayer(p), "t_island", "center_x");
+        int z = getInformationByNameInt(getIslandNameByPlayer(p), "t_island", "center_z");
+        int px = (int) loc.getX();
+        int pz = (int) loc.getZ();
+        int radius = switch(getInformationByNameInt(getIslandNameByPlayer(p), "t_island", "prestige_level")){
+            case 2 -> 50;
+            case 3 -> 75;
+            case 4 -> 125;
+            case 5 -> 200;
+            default -> 25;
+        };
+        return px <= x + radius && px >= x - radius && pz <= z + radius && pz >= z - radius;
+    }
+
+    public static int getPlayerGrade(Player p){
+        return getInformationByNameInt(p.getName(), "t_user", "user_island_grade");
+    }
+
+    public static int getIslandLevelByPlayer(Player p){
+        return getInformationByNameInt(getIslandNameByPlayer(p), "t_island", "level");
+    }
+
+    public static int getIslandPrestigeByPlayer(Player p){
+        return getInformationByNameInt(getIslandNameByPlayer(p), "t_island", "prestige_level");
+    }
+
+    public static ArrayList<String> getIslandPlayers(String islandName){
+        ArrayList<String> players = new ArrayList<>();
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            ResultSet result = statement.executeQuery("SELECT * FROM t_user WHERE island_id=" + getInformationByNameInt(islandName, "t_island", "id") + ";");
+            while(result.next()){
+                players.add(result.getString("name"));
+            }
+        }catch (Exception e){}
+        return players;
+    }
+
+    public static ArrayList<String> getIslandWarpsName(){
+        ArrayList<String> warps = new ArrayList<>();
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            ResultSet result = statement.executeQuery("SELECT name FROM t_island_warp");
+            while (result.next()){
+                warps.add(result.getString("name"));
+            }
+        }catch (Exception e){}
+        return warps;
+    }
+
+    public static Location getObLocationByIslandName(String isName){
+        return new Location(Bukkit.getWorld("islands"), getInformationByNameInt(isName, "t_island", "oneblock_x"), getInformationByNameInt(isName, "t_island", "oneblock_y"), getInformationByNameInt(isName, "t_island", "oneblock_z"));
+    }
     // =========================================================================================
     //                             CONNECTION & DECONNEXION DE LA DB
     // =========================================================================================
@@ -77,6 +129,7 @@ public class MySQL {
             }
         }
     }
+
     public void disconnect(){
         if(isConnected()){
             try {

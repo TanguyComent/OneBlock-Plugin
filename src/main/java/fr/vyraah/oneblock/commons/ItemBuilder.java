@@ -3,12 +3,14 @@ package fr.vyraah.oneblock.commons;
 import org.bukkit.Color;
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.util.Arrays;
 import java.util.List;
@@ -53,6 +55,18 @@ public class ItemBuilder {
         return this;
     }
 
+    public ItemBuilder addStringComponent(String key, String value){
+        meta = item.getItemMeta();
+        meta.getPersistentDataContainer().set(NamespacedKey.fromString(key), PersistentDataType.STRING, value);
+        item.setItemMeta(meta);
+        return this;
+    }
+    public ItemBuilder addIntComponent(String key, int value){
+        meta = item.getItemMeta();
+        meta.getPersistentDataContainer().set(NamespacedKey.fromString(key), PersistentDataType.INTEGER, value);
+        item.setItemMeta(meta);
+        return this;
+    }
 
     public ItemBuilder setLoreList(List<String> lore) {
         meta = item.getItemMeta();

@@ -9,5 +9,6 @@ public class CommandsManager {
     public void initCommands() {
         // main.getCommand("namecommand").setExecutor(new CommandExecutor());
         main.getCommand("is").setExecutor(new oneblock());
+        main.getCommand("ob").setExecutor(new oneblock());
     }
 }

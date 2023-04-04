@@ -51,3 +51,5 @@ processResources {
         expand props
     }
 }
+
+compileJava.options.encoding = 'UTF-8'

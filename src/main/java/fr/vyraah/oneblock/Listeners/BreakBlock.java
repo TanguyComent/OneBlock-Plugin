@@ -11,6 +11,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.PlayerChatEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -22,7 +23,10 @@ public class BreakBlock implements Listener {
     @EventHandler
     public void blockBreakEvent(BlockBreakEvent e){
         Player p = e.getPlayer();
-        if(!MySQL.isPlayerOnHisIsland(p) && !p.isOp()) return;
+        if(!MySQL.isLocationIsInPlayerIsland(p, e.getBlock().getLocation()) && !p.isOp()) {
+            e.setCancelled(true);
+            return;
+        }
         Block bl = e.getBlock();
         Location obLocation = MySQL.getObLocationByIslandName(MySQL.getIslandNameByPlayer(p));
         if(bl.getLocation().distance(obLocation) == 0){
@@ -66,6 +70,15 @@ public class BreakBlock implements Listener {
                     obLocation.getBlock().setType(Material.COAL_ORE);
                 }
             }
+        }
+    }
+
+    @EventHandler
+    public void onPlaceBlock(BlockPlaceEvent e){
+        Player p = e.getPlayer();
+        Block bl = e.getBlock();
+        if(!MySQL.isLocationIsInPlayerIsland(p, bl.getLocation()) && !p.isOp()){
+            e.setCancelled(true);
         }
     }
 

@@ -78,6 +78,24 @@ public class MySQL {
         return px <= x + radius && px >= x - radius && pz <= z + radius && pz >= z - radius;
     }
 
+    public static String getOnWhichIslandIsLocation(Location loc){
+        if(!loc.getWorld().getName().equalsIgnoreCase("islands")){return "Error you are not in the good world";}
+        int x = 0;
+        int z = 0;
+        while(true){
+            Location testLoc = new Location(Bukkit.getWorld("islands"), x, 0, z);
+            if(new Location(Bukkit.getWorld("islands"), loc.getX(), 0, loc.getZ()).distance(testLoc) <= 300) break;
+            if( x == z ){ x += 3000; } else { z += 3000; }
+        }
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            ResultSet result = statement.executeQuery("SELECT name FROM t_island WHERE center_x=" + x + " AND center_z=" + z + ";");
+            while(result.next()){
+                return result.getString("name");
+            }
+        }catch(Exception e){}
+        return "";
+    }
+
     public static int getPlayerGrade(Player p){
         return getInformationByNameInt(p.getName(), "t_user", "user_island_grade");
     }

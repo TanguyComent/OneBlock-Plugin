@@ -293,8 +293,12 @@ public class oneblock implements CommandExecutor {
 
                 // CMD : /is visit
                 case "visit", "visite" -> {
+                    if(args.length == 1){
+                        p.sendMessage(prefix + ChatColor.RED + "Tu dois spécifier l'ile que tu veut visiter !");
+                        return false;
+                    }
                     String target = args[1];
-                    boolean canVisit = (MySQL.getInformationByNameInt(target, "t_island", "allow_visitors") == 1) ? true : false;
+                    boolean canVisit = MySQL.getInformationByNameInt(target, "t_island", "allow_visitors") == 1;
                     if(canVisit){
                         teleportPlayerToIsland(p, target);
                         p.sendMessage(prefix + ChatColor.GREEN + "Bienvenue sur l ile " + ChatColor.GOLD + target);
@@ -356,9 +360,11 @@ public class oneblock implements CommandExecutor {
                 }
 
                 case "test" -> {
-                    p.sendMessage(prefix + net.md_5.bungee.api.ChatColor.of("#fdd813") + "ce message est une information");
-                    p.sendMessage(prefix + net.md_5.bungee.api.ChatColor.of(new Color(170, 0, 0)) + "ce message est une erreur");
-                    p.sendMessage(prefix + net.md_5.bungee.api.ChatColor.of(new Color(51, 255, 73)) + "ce message est une reussite");
+                    p.sendMessage(MySQL.getOnWhichIslandIsLocation(p.getLocation()));
+                }
+
+                default -> {
+                    p.sendMessage(prefix + "§4Commande inconnue");
                 }
             }
         }

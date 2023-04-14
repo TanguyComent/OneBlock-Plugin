@@ -116,6 +116,10 @@ public class oneblock implements CommandExecutor {
 
                 // CMD : /is invite
                 case "invite" -> {
+                    if(args.length == 1){
+                        p.sendMessage(prefix + "§4Mauvaise utilisation /is invite <joueur>");
+                        return false;
+                    }
                     if(!MySQL.getPlayerHaveAnIsland(p)){
                         if(args.length == 2){
                             if(args[1].equalsIgnoreCase("list")){
@@ -125,7 +129,7 @@ public class oneblock implements CommandExecutor {
                                     ResultSet result = statement.executeQuery("SELECT * FROM t_pending_island_invite WHERE name=\"" + p.getName() + "\";");
                                     ArrayList<String> invitations = new ArrayList<>();
                                     while(result.next()){
-                                        invitations.add(prefix + ChatColor.GOLD + result.getString("island_invitation_sender") + ChatColor.GREEN + "t a invite a rejoindre son ile (" + ChatColor.GOLD +  result.getString("island_name") + ChatColor.GREEN + "§2)");
+                                        invitations.add(prefix + ChatColor.GOLD + result.getString("island_invitation_sender") + ChatColor.GREEN + " t'as invité à rejoindre son ile (" + ChatColor.GOLD +  result.getString("island_name") + ChatColor.GREEN + "§2)");
                                     }
                                     p.sendMessage(prefix + ChatColor.BLUE + "Liste de tes invitations :");
                                     if(invitations.size() == 0) invitations.add(prefix + ChatColor.GREEN + "Vous n'avez aucune invitation");
@@ -215,6 +219,11 @@ public class oneblock implements CommandExecutor {
                     //on regarde si le joueur a pas deja une ile (normalement non mais on sais jamais)
                     if(MySQL.getPlayerHaveAnIsland(p)){
                         p.sendMessage(prefix + ChatColor.RED + "Tu as deja une ile !");
+                        return false;
+                    }
+
+                    if(args.length == 1){
+                        p.sendMessage(prefix + "§4Mauvaise utilisation /is join <joueur>");
                         return false;
                     }
 
@@ -347,7 +356,7 @@ public class oneblock implements CommandExecutor {
                     } catch (SQLException e) {
                         throw new RuntimeException(e);
                     }
-                    boolean canVisit = (MySQL.getInformationByNameInt(target, "t_island", "allow_visitors") == 1) ? true : false;
+                    boolean canVisit = MySQL.getInformationByNameInt(target, "t_island", "allow_visitors") == 1;
                     if(!canVisit) return false;
                     int x = MySQL.getInformationByNameInt(args[1], "t_island_warp", "warp_x");
                     int y = MySQL.getInformationByNameInt(args[1], "t_island_warp", "warp_y");
@@ -371,7 +380,7 @@ public class oneblock implements CommandExecutor {
         return false;
     }
 
-    public void teleportPlayerToIsland(Player p, String islandName){
+    public static void teleportPlayerToIsland(Player p, String islandName){
         int x = MySQL.getInformationByNameInt(islandName, "t_island", "center_x");
         int y = MySQL.getInformationByNameInt(islandName, "t_island", "center_y");
         int z = MySQL.getInformationByNameInt(islandName, "t_island", "center_z");

@@ -63,7 +63,7 @@ public final class Main extends JavaPlugin {
         try{
             Bukkit.getWorld("islands").getDifficulty();
         }catch (NullPointerException e){
-            getServer().dispatchCommand(getServer().getConsoleSender(), "mv create test NORMAL -g VoidGen -t FLAT");
+            getServer().dispatchCommand(getServer().getConsoleSender(), "mv create islands NORMAL -g VoidGen -t FLAT");
         }
 
         //--------------------------------------------------------------------------------

@@ -133,10 +133,48 @@ public class MySQL {
     public static Location getObLocationByIslandName(String isName){
         return new Location(Bukkit.getWorld("islands"), getInformationByNameInt(isName, "t_island", "oneblock_x"), getInformationByNameInt(isName, "t_island", "oneblock_y"), getInformationByNameInt(isName, "t_island", "oneblock_z"));
     }
+
+    public static Location getSpawnLocationByIslandName(String isName){
+        return new Location(Bukkit.getWorld("islands"), getInformationByNameInt(isName, "t_island", "spawn_x"), getInformationByNameInt(isName, "t_island", "spawn_y"), getInformationByNameInt(isName, "t_island", "spawn_z"));
+    }
+
     // =========================================================================================
     //                             CONNECTION & DECONNEXION DE LA DB
     // =========================================================================================
 
+    public static void initDatabase(){
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            statement.execute("CREATE TABLE t_island (id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, name VARCHAR(500) NOT NULL UNIQUE, prestige_level INT NOT NULL DEFAULT 1, level FLOAT NOT NULL DEFAULT 0, center_x INT NOT NULL, center_z INT NOT NULL, center_y INT NOT NULL, oneblock_x INT NOT NULL, oneblock_y INT NOT NULL, oneblock_z INT NOT NULL, spawn_x INT NOT NULL, spawn_y INT NOT NULL, spawn_z INT NOT NULL, allow_visitors INT NOT NULL DEFAULT TRUE);");
+            statement.execute("""
+                    CREATE TABLE t_user
+                    (
+                    name VARCHAR(20),
+                    island_id INT NOT NULL,
+                    user_island_grade INT DEFAULT 1
+                    );
+                    """);
+            statement.execute("""
+                    CREATE TABLE t_pending_island_invite
+                    (
+                    name VARCHAR(20) NOT NULL,
+                    island_name VARCHAR(50) NOT NULL,
+                    island_invitation_sender VARCHAR(20) NOT NULL
+                    );
+                    """);
+            statement.execute("""
+                    CREATE TABLE t_island_warp
+                    (
+                    name VARCHAR(50) NOT NULL,
+                    island_id INT NOT NULL,
+                    warp_x INT NOT NULL,
+                    warp_y INT NOT NULL,
+                    warp_z INT NOT NULL,
+                    yaw INT NOT NULL,
+                    pitch INT NOT NULL
+                    );
+                    """);
+        }catch(Exception e){}
+    }
     public void connect(String host, int port, String database, String user, String password){
         if(!isConnected()){
             try{

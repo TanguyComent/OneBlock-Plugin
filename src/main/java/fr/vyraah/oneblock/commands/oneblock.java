@@ -5,8 +5,8 @@ import com.github.yannicklamprecht.worldborder.api.WorldBorderApi;
 import fr.vyraah.oneblock.Main;
 import fr.vyraah.oneblock.SQL.MySQL;
 import fr.vyraah.oneblock.guis.guis;
-import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.api.chat.ClickEvent;
+import net.kyori.adventure.text.Component;
+import net.md_5.bungee.api.chat.*;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.*;
 import org.bukkit.command.Command;
@@ -47,6 +47,27 @@ public class oneblock implements CommandExecutor {
                 }
             }
             switch (args[0]) {
+
+                //CMD : /is help
+                case "help" -> {
+                    p.sendMessage(String.format("""
+                            %s§eListe des commandes d'iles :
+                            \n
+                            %s§b/ob create <nom> -> §7Permet de crée son ile
+                            %s§b/ob go -> §7Permet de se téléporter à son ile
+                            %s§b/ob invite <joueur> -> §7Permet d'inviter un joueur sur son ile
+                            %s§b/ob invite list -> §7Permet d'afficher les invitations d'ile en attente que vous avez
+                            %s§b/ob kick <joueur> -> §7Permet de kick un membre de son ile
+                            %s§b/ob join <joueur> OU <ile> -> §7Permet d'accepter une invitation à rejoindre une ile
+                            %s§b/ob leave -> §7Permet de quitter son ile (impossible si vous êtes fondateur de l'ile)
+                            %s§b/ob disband -> §7Permet de supprimer son ile (réservé aux fondateurs d'ile)
+                            %s§b/ob visite <ile> -> §7Permet de visiter une ile si l'ile accepte les visites
+                            %s§b/ob setwarp -> §7Permet de crée un warp d'ile (point de tp accessible à tous) (BETA)
+                            %s§b/ob warp <nom du warp> -> §7Permet de se téleporter à un warp d'ile précis (BETA)
+                            %s§b/ob warp -> §7ouvre le menu des warps (NON FONCTIONNEL (enfin à moitié))
+                            """, prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix));
+                    return true;
+                }
 
                 // CMD : /is create || /is cr
                 case "create", "cr" -> {
@@ -120,6 +141,32 @@ public class oneblock implements CommandExecutor {
                         p.sendMessage(prefix + "§4Mauvaise utilisation /is invite <joueur>");
                         return false;
                     }
+                    if(MySQL.getIslandPrestigeByPlayer(p) == 1){
+                        if(MySQL.howManyPlayersHasIsland(MySQL.getIslandNameByPlayer(p)) >= 5){
+                            p.sendMessage(prefix + "§4Votre ile est pleine, vous devez augmenter votre niveau de prestige pour augmenter le nombre de joueur qu'une ile peut accueillir");
+                            return false;
+                        }
+                    }else if(MySQL.getIslandPrestigeByPlayer(p) == 2){
+                        if(MySQL.howManyPlayersHasIsland(MySQL.getIslandNameByPlayer(p)) >= 6){
+                            p.sendMessage(prefix + "§4Votre ile est pleine, vous devez augmenter votre niveau de prestige pour augmenter le nombre de joueur qu'une ile peut accueillir");
+                            return false;
+                        }
+                    }else if(MySQL.getIslandPrestigeByPlayer(p) == 3){
+                        if(MySQL.howManyPlayersHasIsland(MySQL.getIslandNameByPlayer(p)) >= 7){
+                            p.sendMessage(prefix + "§4Votre ile est pleine, vous devez augmenter votre niveau de prestige pour augmenter le nombre de joueur qu'une ile peut accueillir");
+                            return false;
+                        }
+                    }else if(MySQL.getIslandPrestigeByPlayer(p) == 4){
+                        if(MySQL.howManyPlayersHasIsland(MySQL.getIslandNameByPlayer(p)) >= 8){
+                            p.sendMessage(prefix + "§4Votre ile est pleine, vous devez augmenter votre niveau de prestige pour augmenter le nombre de joueur qu'une ile peut accueillir");
+                            return false;
+                        }
+                    }else if(MySQL.getIslandPrestigeByPlayer(p) == 5){
+                        if(MySQL.howManyPlayersHasIsland(MySQL.getIslandNameByPlayer(p)) >= 9){
+                            p.sendMessage(prefix + "§4Votre ile est pleine.");
+                            return false;
+                        }
+                    }
                     if(!MySQL.getPlayerHaveAnIsland(p)){
                         if(args.length == 2){
                             if(args[1].equalsIgnoreCase("list")){
@@ -164,8 +211,10 @@ public class oneblock implements CommandExecutor {
                             return false;
                         }
                         TextComponent accept = new TextComponent(ChatColor.GREEN + "[accepter]    ");
+                        accept.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder("§2Click ici pour accepter").create()));
                         accept.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/is join " + p.getName()));
                         TextComponent deny = new TextComponent(ChatColor.RED + "    [refuser]");
+                        deny.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder("§4Click ici pour refuser").create()));
                         target.sendMessage(prefix + ChatColor.GREEN + "Le joueur "+ ChatColor.GOLD + p.getName() + ChatColor.GREEN + " t invite a rejoindre son ile !");
                         target.spigot().sendMessage(accept,deny);
                     }catch (NullPointerException e){
@@ -368,8 +417,10 @@ public class oneblock implements CommandExecutor {
                     p.sendMessage(prefix + ChatColor.GREEN + "Teleportation reussi !");
                 }
 
+                //cmd de test pour afficher rapidement des valeurs ou faire en vitesse des tests TJR LAISSER A LA FIN DU SWITCH
                 case "test" -> {
-                    p.sendMessage(MySQL.getOnWhichIslandIsLocation(p.getLocation()));
+                    if(!p.isOp()) return false;
+                    p.sendMessage("" + MySQL.howManyPlayersHasIsland(MySQL.getIslandNameByPlayer(p)));
                 }
 
                 default -> {

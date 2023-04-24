@@ -31,6 +31,7 @@ public class BreakBlock implements Listener {
     @EventHandler
     public void blockBreakEvent(BlockBreakEvent e){
         Player p = e.getPlayer();
+        if(!p.getWorld().getName().equals("islands")) return;
         if(!MySQL.isLocationIsInPlayerIsland(p, e.getBlock().getLocation()) && !p.isOp()) {
             e.setCancelled(true);
             return;
@@ -99,7 +100,7 @@ public class BreakBlock implements Listener {
                 for(Player players : Bukkit.getOnlinePlayers()){
                     if(players.getLocation().getWorld().equals(Bukkit.getWorld("islands"))){
                         if(MySQL.getOnWhichIslandIsLocation(players.getLocation()).equals(MySQL.getIslandNameByPlayer(p))) {
-                            players.teleport(new Location(Bukkit.getWorld("world"), 0, 0, 0));
+                            players.teleport(Main.INSTANCE.spawn);
                             players.sendMessage("§2Vous avez été téleporter au spawn car l'ile sur laquelle vous étiez viens d'être supprimée.");
                         }
                     }

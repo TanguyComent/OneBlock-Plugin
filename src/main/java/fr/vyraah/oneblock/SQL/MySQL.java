@@ -138,43 +138,58 @@ public class MySQL {
         return new Location(Bukkit.getWorld("islands"), getInformationByNameInt(isName, "t_island", "spawn_x"), getInformationByNameInt(isName, "t_island", "spawn_y"), getInformationByNameInt(isName, "t_island", "spawn_z"));
     }
 
+    public static int howManyPlayersHasIsland(String islandName){
+        int nbr = 0;
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            ResultSet result = statement.executeQuery("SELECT COUNT(*) AS nbr FROM t_user WHERE island_id=" + getInformationByNameInt(islandName, "t_island", "id") + ";");
+            while(result.next()){
+                nbr = result.getInt("nbr");
+            }
+        }catch(Exception e){}
+        return nbr;
+    }
+
     // =========================================================================================
     //                             CONNECTION & DECONNEXION DE LA DB
     // =========================================================================================
 
-    public static void initDatabase(){
+    public static void initDatabase() {
+        //creation du shema de la bdd automatique, utilisation de ALTER ADD pour prévoir des ajouts futurs de nouvelles tables ou champs de tables à la bdd
         try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
-            statement.execute("CREATE TABLE t_island (id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, name VARCHAR(500) NOT NULL UNIQUE, prestige_level INT NOT NULL DEFAULT 1, level FLOAT NOT NULL DEFAULT 0, center_x INT NOT NULL, center_z INT NOT NULL, center_y INT NOT NULL, oneblock_x INT NOT NULL, oneblock_y INT NOT NULL, oneblock_z INT NOT NULL, spawn_x INT NOT NULL, spawn_y INT NOT NULL, spawn_z INT NOT NULL, allow_visitors INT NOT NULL DEFAULT TRUE);");
-            statement.execute("""
-                    CREATE TABLE t_user
-                    (
-                    name VARCHAR(20),
-                    island_id INT NOT NULL,
-                    user_island_grade INT DEFAULT 1
-                    );
-                    """);
-            statement.execute("""
-                    CREATE TABLE t_pending_island_invite
-                    (
-                    name VARCHAR(20) NOT NULL,
-                    island_name VARCHAR(50) NOT NULL,
-                    island_invitation_sender VARCHAR(20) NOT NULL
-                    );
-                    """);
-            statement.execute("""
-                    CREATE TABLE t_island_warp
-                    (
-                    name VARCHAR(50) NOT NULL,
-                    island_id INT NOT NULL,
-                    warp_x INT NOT NULL,
-                    warp_y INT NOT NULL,
-                    warp_z INT NOT NULL,
-                    yaw INT NOT NULL,
-                    pitch INT NOT NULL
-                    );
-                    """);
+            //création de la table des iles
+            statement.execute("CREATE TABLE t_island (id INT NOT NULL AUTO_INCREMENT PRIMARY KEY);");
+            statement.execute("ALTER TABLE t_island ADD name VARCHAR(500) NOT NULL UNIQUE;");
+            statement.execute("ALTER TABLE t_island ADD prestige_level INT NOT NULL DEFAULT 1;");
+            statement.execute("ALTER TABLE t_island ADD level FLOAT NOT NULL DEFAULT 0;");
+            statement.execute("ALTER TABLE t_island ADD center_x INT NOT NULL;");
+            statement.execute("ALTER TABLE t_island ADD center_y INT NOT NULL;");
+            statement.execute("ALTER TABLE t_island ADD center_z INT NOT NULL;");
+            statement.execute("ALTER TABLE t_island ADD oneblock_x INT NOT NULL;");
+            statement.execute("ALTER TABLE t_island ADD oneblock_y INT NOT NULL;");
+            statement.execute("ALTER TABLE t_island ADD oneblock_z INT NOT NULL;");
+            statement.execute("ALTER TABLE t_island ADD spawn_x INT NOT NULL;");
+            statement.execute("ALTER TABLE t_island ADD spawn_y INT NOT NULL;");
+            statement.execute("ALTER TABLE t_island ADD spawn_z INT NOT NULL;");
+            statement.execute("ALTER TABLE t_island ADD allow_visitors INT NOT NULL DEFAULT TRUE;");
+            //création de la table des joueurs
+            statement.execute("CREATE TABLE t_user (name VARCHAR(20));");
+            statement.execute("ALTER TABLE t_user ADD island_id INT NOT NULL;");
+            statement.execute("ALTER TABLE t_user ADD user_island_grade INT DEFAULT 1;");
+            //création de la table des invitations d'is
+            statement.execute("CREATE TABLE t_pending_island_invite (name VARCHAR(20) NOT NULL);");
+            statement.execute("ALTER TABLE t_pending_island_invite ADD island_name VARCHAR(50) NOT NULL;");
+            statement.execute("ALTER TABLE t_pending_island_invite ADD island_invitation_sender VARCHAR(20) NOT NULL;");
+            //création de la table des island warps
+            statement.execute("CREATE TABLE t_island_warp (name VARCHAR(50) NOT NULL);");
+            statement.execute("ALTER TABLE t_island_warp ADD island_id INT NOT NULL;");
+            statement.execute("ALTER TABLE t_island_warp ADD warp_x INT NOT NULL;");
+            statement.execute("ALTER TABLE t_island_warp ADD warp_y INT NOT NULL;");
+            statement.execute("ALTER TABLE t_island_warp ADD warp_z INT NOT NULL;");
+            statement.execute("ALTER TABLE t_island_warp ADD yaw INT NOT NULL;");
+            statement.execute("ALTER TABLE t_island_warp ADD pitch INT NOT NULL;");
         }catch(Exception e){}
     }
+
     public void connect(String host, int port, String database, String user, String password){
         if(!isConnected()){
             try{

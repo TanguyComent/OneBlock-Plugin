@@ -5,6 +5,7 @@ import fr.vyraah.oneblock.SQL.MySQL;
 import fr.vyraah.oneblock.managers.CommandsManager;
 import fr.vyraah.oneblock.managers.EventManager;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -15,6 +16,7 @@ public final class Main extends JavaPlugin {
     public FileConfiguration config = getConfig();
     public static Main INSTANCE;
     private CommandsManager commandManager;
+    public static Location spawn;
 
     public MySQL mysql = new MySQL();
     @Override
@@ -75,6 +77,12 @@ public final class Main extends JavaPlugin {
         config.addDefault("mysql_user", "root");
         config.addDefault("mysql_password", "root");
         config.addDefault("mysql_database", "vyraahob");
+        config.addDefault("spawn_world", "world");
+        config.addDefault("spawn_x", 0);
+        config.addDefault("spawn_y", 0);
+        config.addDefault("spawn_z", 0);
+        config.addDefault("spawn_yaw", 0);
+        config.addDefault("spawn_pitch", 0);
         config.addDefault("next_island_x", 0); // utile pour savoir les coos de la prochaine ile
         config.addDefault("next_island_z", 0);
         config.options().copyDefaults(true);
@@ -85,6 +93,7 @@ public final class Main extends JavaPlugin {
         //--------------------------------------------------------------------------------
 
         INSTANCE = this;
+        MySQL.initDatabase();
 
         //--------------------------------------------------------------------------------
 
@@ -99,6 +108,10 @@ public final class Main extends JavaPlugin {
 
         this.commandManager = new CommandsManager();
         this.commandManager.initCommands();
+
+        //--------------------------------------------------------------------------------
+
+        spawn = new Location(Bukkit.getWorld(config.getString("spawn_world")), config.getLong("spawn_x"), config.getLong("spawn_y"), config.getLong("spawn_z"), config.getLong("spawn_yaw"), config.getLong("spawn_pitch"));
 
     }
 

@@ -1,9 +1,11 @@
 package fr.vyraah.oneblock;
 
+import PlaceHolder.IslandLvl;
 import com.github.yannicklamprecht.worldborder.api.WorldBorderApi;
 import fr.vyraah.oneblock.SQL.MySQL;
 import fr.vyraah.oneblock.managers.CommandsManager;
 import fr.vyraah.oneblock.managers.EventManager;
+import me.arcaniax.hdb.api.HeadDatabaseAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -17,8 +19,8 @@ public final class Main extends JavaPlugin {
     public static Main INSTANCE;
     private CommandsManager commandManager;
     public static Location spawn;
-
     public MySQL mysql = new MySQL();
+    public static HeadDatabaseAPI head;
     @Override
     public void onEnable() {
 
@@ -53,6 +55,11 @@ public final class Main extends JavaPlugin {
             Bukkit.getLogger().info("Veuillez ajouter le plugin VoidGen a votre server");
             Bukkit.getLogger().info("lien : https://www.spigotmc.org/resources/voidgen.25391/");
             Bukkit.getLogger().info("==================================================================================");
+            canStart = false;
+        }
+
+        if(getServer().getPluginManager().getPlugin("HeadDatabase") == null){
+            Bukkit.getLogger().info("Il faut le plugin headdatabase");
             canStart = false;
         }
 
@@ -113,6 +120,15 @@ public final class Main extends JavaPlugin {
 
         spawn = new Location(Bukkit.getWorld(config.getString("spawn_world")), config.getLong("spawn_x"), config.getLong("spawn_y"), config.getLong("spawn_z"), config.getLong("spawn_yaw"), config.getLong("spawn_pitch"));
 
+        //--------------------------------------------------------------------------------
+
+        if(Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            new IslandLvl().register();
+        }
+
+        //
+
+        head = new HeadDatabaseAPI();
     }
 
     @Override

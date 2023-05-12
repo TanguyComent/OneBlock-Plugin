@@ -19,12 +19,17 @@ repositories {
         name = "eldonexus"
         url = "https://eldonexus.de/repository/maven-releases/"
     }
+    maven {
+        url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/'
+    }
 }
 
 dependencies {
     compileOnly 'io.papermc.paper:paper-api:1.18.2-R0.1-SNAPSHOT'
     compileOnly 'com.github.yannicklamprecht:worldborderapi:1.180.0'
     implementation "mysql:mysql-connector-java:6.0.6"
+    compileOnly("com.arcaniax:HeadDatabase-API:1.3.1")
+    compileOnly 'me.clip:placeholderapi:2.11.3'
 }
 
 def targetJavaVersion = 17

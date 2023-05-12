@@ -29,11 +29,11 @@ public class MySQL {
         return false;
     }
 
-    public static String getIslandNameByPlayer(Player p){
+    public static String getIslandNameByPlayer(String playerName){
         String islandName = "";
         try{
             Statement statement = Main.INSTANCE.mysql.getConnection().createStatement();
-            ResultSet result = statement.executeQuery("SELECT * FROM t_user WHERE name=\"" + p.getName() + "\";");
+            ResultSet result = statement.executeQuery("SELECT * FROM t_user WHERE name=\"" + playerName + "\";");
             int id = 0;
             while(result.next()){
                 id = result.getInt("island_id");
@@ -64,11 +64,11 @@ public class MySQL {
 
     public static boolean isLocationIsInPlayerIsland(Player p, Location loc){
         if(!loc.getWorld().getName().equals("islands")) return false;
-        int x = getInformationByNameInt(getIslandNameByPlayer(p), "t_island", "center_x");
-        int z = getInformationByNameInt(getIslandNameByPlayer(p), "t_island", "center_z");
+        int x = getInformationByNameInt(getIslandNameByPlayer(p.getName()), "t_island", "center_x");
+        int z = getInformationByNameInt(getIslandNameByPlayer(p.getName()), "t_island", "center_z");
         int px = (int) loc.getX();
         int pz = (int) loc.getZ();
-        int radius = switch(getInformationByNameInt(getIslandNameByPlayer(p), "t_island", "prestige_level")){
+        int radius = switch(getInformationByNameInt(getIslandNameByPlayer(p.getName()), "t_island", "prestige_level")){
             case 2 -> 50;
             case 3 -> 75;
             case 4 -> 125;
@@ -96,16 +96,16 @@ public class MySQL {
         return "";
     }
 
-    public static int getPlayerGrade(Player p){
-        return getInformationByNameInt(p.getName(), "t_user", "user_island_grade");
+    public static int getPlayerGrade(String playerName){
+        return getInformationByNameInt(playerName, "t_user", "user_island_grade");
     }
 
     public static int getIslandLevelByPlayer(Player p){
-        return getInformationByNameInt(getIslandNameByPlayer(p), "t_island", "level");
+        return getInformationByNameInt(getIslandNameByPlayer(p.getName()), "t_island", "level");
     }
 
     public static int getIslandPrestigeByPlayer(Player p){
-        return getInformationByNameInt(getIslandNameByPlayer(p), "t_island", "prestige_level");
+        return getInformationByNameInt(getIslandNameByPlayer(p.getName()), "t_island", "prestige_level");
     }
 
     public static ArrayList<String> getIslandPlayers(String islandName){
@@ -157,37 +157,43 @@ public class MySQL {
         //creation du shema de la bdd automatique, utilisation de ALTER ADD pour prévoir des ajouts futurs de nouvelles tables ou champs de tables à la bdd
         try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
             //création de la table des iles
-            statement.execute("CREATE TABLE t_island (id INT NOT NULL AUTO_INCREMENT PRIMARY KEY);");
-            statement.execute("ALTER TABLE t_island ADD name VARCHAR(500) NOT NULL UNIQUE;");
-            statement.execute("ALTER TABLE t_island ADD prestige_level INT NOT NULL DEFAULT 1;");
-            statement.execute("ALTER TABLE t_island ADD level FLOAT NOT NULL DEFAULT 0;");
-            statement.execute("ALTER TABLE t_island ADD center_x INT NOT NULL;");
-            statement.execute("ALTER TABLE t_island ADD center_y INT NOT NULL;");
-            statement.execute("ALTER TABLE t_island ADD center_z INT NOT NULL;");
-            statement.execute("ALTER TABLE t_island ADD oneblock_x INT NOT NULL;");
-            statement.execute("ALTER TABLE t_island ADD oneblock_y INT NOT NULL;");
-            statement.execute("ALTER TABLE t_island ADD oneblock_z INT NOT NULL;");
-            statement.execute("ALTER TABLE t_island ADD spawn_x INT NOT NULL;");
-            statement.execute("ALTER TABLE t_island ADD spawn_y INT NOT NULL;");
-            statement.execute("ALTER TABLE t_island ADD spawn_z INT NOT NULL;");
-            statement.execute("ALTER TABLE t_island ADD allow_visitors INT NOT NULL DEFAULT TRUE;");
+            try{statement.execute("CREATE TABLE t_island (id INT NOT NULL AUTO_INCREMENT PRIMARY KEY);");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD name VARCHAR(500) NOT NULL UNIQUE;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD prestige_level INT NOT NULL DEFAULT 1;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD level FLOAT NOT NULL DEFAULT 0;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD center_x INT NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD center_y INT NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD center_z INT NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD oneblock_x INT NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD oneblock_y INT NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD oneblock_z INT NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD spawn_x INT NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD spawn_y INT NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD spawn_z INT NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD allow_visitors INT NOT NULL DEFAULT TRUE;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD bank INT DEFAULT 0;");}catch(Exception e){}
             //création de la table des joueurs
-            statement.execute("CREATE TABLE t_user (name VARCHAR(20));");
-            statement.execute("ALTER TABLE t_user ADD island_id INT NOT NULL;");
-            statement.execute("ALTER TABLE t_user ADD user_island_grade INT DEFAULT 1;");
+            try{statement.execute("CREATE TABLE t_user (name VARCHAR(20));");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_user ADD island_id INT NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_user ADD user_island_grade INT DEFAULT 1;");}catch(Exception e){}
             //création de la table des invitations d'is
-            statement.execute("CREATE TABLE t_pending_island_invite (name VARCHAR(20) NOT NULL);");
-            statement.execute("ALTER TABLE t_pending_island_invite ADD island_name VARCHAR(50) NOT NULL;");
-            statement.execute("ALTER TABLE t_pending_island_invite ADD island_invitation_sender VARCHAR(20) NOT NULL;");
+            try{statement.execute("CREATE TABLE t_pending_island_invite (name VARCHAR(20) NOT NULL);");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_pending_island_invite ADD island_name VARCHAR(50) NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_pending_island_invite ADD island_invitation_sender VARCHAR(20) NOT NULL;");}catch(Exception e){}
             //création de la table des island warps
-            statement.execute("CREATE TABLE t_island_warp (name VARCHAR(50) NOT NULL);");
-            statement.execute("ALTER TABLE t_island_warp ADD island_id INT NOT NULL;");
-            statement.execute("ALTER TABLE t_island_warp ADD warp_x INT NOT NULL;");
-            statement.execute("ALTER TABLE t_island_warp ADD warp_y INT NOT NULL;");
-            statement.execute("ALTER TABLE t_island_warp ADD warp_z INT NOT NULL;");
-            statement.execute("ALTER TABLE t_island_warp ADD yaw INT NOT NULL;");
-            statement.execute("ALTER TABLE t_island_warp ADD pitch INT NOT NULL;");
-        }catch(Exception e){}
+            try{statement.execute("CREATE TABLE t_island_warp (name VARCHAR(50) NOT NULL);");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island_warp ADD island_id INT NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island_warp ADD warp_x INT NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island_warp ADD warp_y INT NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island_warp ADD warp_z INT NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island_warp ADD yaw INT NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island_warp ADD pitch INT NOT NULL;");}catch(Exception e){}
+            //création de la table des island ban
+            try{statement.execute("CREATE TABLE t_island_ban (island_id int NOT NULL);");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island_ban ADD banned_player VARCHAR(20);");}catch(Exception e){}
+        }catch(Exception e){
+            throw new RuntimeException(e);
+        }
     }
 
     public void connect(String host, int port, String database, String user, String password){

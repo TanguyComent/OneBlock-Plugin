@@ -9,16 +9,21 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.inventory.meta.Damageable;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -30,6 +35,7 @@ public class BreakBlock implements Listener {
 
     @EventHandler
     public void blockBreakEvent(BlockBreakEvent e){
+
         Player p = e.getPlayer();
         if(!p.getWorld().getName().equals("islands")) return;
         if(!MySQL.isLocationIsInPlayerIsland(p, e.getBlock().getLocation()) && !p.isOp()) {
@@ -37,13 +43,25 @@ public class BreakBlock implements Listener {
             return;
         }
         Block bl = e.getBlock();
-        Location obLocation = MySQL.getObLocationByIslandName(MySQL.getIslandNameByPlayer(p));
+        Location obLocation = MySQL.getObLocationByIslandName(MySQL.getIslandNameByPlayer(p.getName()));
         if(bl.getLocation().distance(obLocation) == 0){
             e.setCancelled(true);
-            for(ItemStack it : bl.getDrops()){
-                Bukkit.getWorld("islands").dropItem(obLocation.add(0.5, 1, 0.5), it);
+            for(ItemStack it : bl.getDrops(p.getInventory().getItemInMainHand())){
+                Bukkit.getWorld("islands").dropItem(new Location(bl.getWorld(), bl.getX(), bl.getY() + 1, bl.getZ()), it);
             }
-            obLocation.add(-0, -1, -0);
+            ItemMeta meta = p.getInventory().getItemInMainHand().getItemMeta();
+            if(meta instanceof Damageable d){
+                Random r = new Random();
+                if(!meta.hasEnchant(Enchantment.DURABILITY)) {
+                    d.setDamage(((Damageable) meta).getDamage() + 1);
+                    p.getInventory().getItemInMainHand().setItemMeta(d);
+                }else{
+                    if(r.nextInt(meta.getEnchantLevel(Enchantment.DURABILITY)+1) == 0){
+                        d.setDamage(((Damageable) meta).getDamage() + 1);
+                        p.getInventory().getItemInMainHand().setItemMeta(d);
+                    }
+                }
+            }
             obLocation.getBlock().setType(Material.AIR);
             Random r = new Random();
             int luck = r.nextInt(99);
@@ -99,14 +117,14 @@ public class BreakBlock implements Listener {
                 //Tp des joueurs present sur l'is au spawn
                 for(Player players : Bukkit.getOnlinePlayers()){
                     if(players.getLocation().getWorld().equals(Bukkit.getWorld("islands"))){
-                        if(MySQL.getOnWhichIslandIsLocation(players.getLocation()).equals(MySQL.getIslandNameByPlayer(p))) {
+                        if(MySQL.getOnWhichIslandIsLocation(players.getLocation()).equals(MySQL.getIslandNameByPlayer(p.getName()))) {
                             players.teleport(Main.INSTANCE.spawn);
                             players.sendMessage("§2Vous avez été téleporter au spawn car l'ile sur laquelle vous étiez viens d'être supprimée.");
                         }
                     }
                 }
                 //delete island BDD
-                int islandId = MySQL.getInformationByNameInt(MySQL.getIslandNameByPlayer(p), "t_island", "id");
+                int islandId = MySQL.getInformationByNameInt(MySQL.getIslandNameByPlayer(p.getName()), "t_island", "id");
                 try(Statement statement = Main.INSTANCE.mysql.getConnection().createStatement()){
                     statement.execute(String.format("DELETE FROM t_island WHERE id=%d;", islandId));
                     statement.execute(String.format("DELETE FROM t_user WHERE island_id=%d;", islandId));
@@ -115,6 +133,14 @@ public class BreakBlock implements Listener {
                 p.sendMessage("§4Suppression de l'ile annulée");
             }
             p.getPersistentDataContainer().remove(NamespacedKey.fromString("is-delete"));
+        }
+    }
+
+    @EventHandler
+    public void fallDamages(EntityDamageEvent e){
+        if(e.getEntity() instanceof Player p){
+            if(!p.getWorld().equals(Bukkit.getWorld("islands"))) return;
+            if(e.getCause() == EntityDamageEvent.DamageCause.FALL) e.setCancelled(true);
         }
     }
 

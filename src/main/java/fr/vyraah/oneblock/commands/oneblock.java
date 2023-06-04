@@ -14,6 +14,8 @@ import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
@@ -25,6 +27,7 @@ import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class oneblock implements CommandExecutor {
 
@@ -450,12 +453,40 @@ public class oneblock implements CommandExecutor {
                 }
 
                 //cmd /is ban
+                case "ban" -> {
 
+                }
+
+                //cmd /is calculate
+                case "calculate" -> {
+                    if(!MySQL.getPlayerHaveAnIsland(p)){
+                        p.sendMessage(prefix + "§4vous n'avez pas d'ile !");
+                        return false;
+                    }
+                    Location middle = MySQL.getCenterLocationByIslandName(MySQL.getIslandNameByPlayer(p.getName()));
+                    int radius = Main.INSTANCE.radiusLevel.get(MySQL.getIslandPrestigeByPlayer(p));
+                    int newLevel = 0;
+                    p.sendMessage(prefix + "§2Début du calcul du niveau d'ile...");
+                    for(int y = -60; y < 320; y++){
+                        for(int x = (int) middle.getX()-radius; x < middle.getX()+radius; x++){
+                            for(int z = (int) middle.getZ()-radius; z < middle.getZ()+radius; z++){
+                                Location toCheck = new Location(Bukkit.getWorld("islands"), x, y, z);
+                                if(Main.INSTANCE.levelItems.containsKey(toCheck.getBlock().getType())){
+                                    newLevel += Main.INSTANCE.levelItems.get(toCheck.getBlock().getType());
+                                }
+                            }
+                        }
+                    }
+                    p.sendMessage(prefix + "§2Calcul terminée ! Nouveau niveau : §6" + newLevel);
+                    try(Statement statement = Main.INSTANCE.mysql.getConnection().createStatement()){
+                        statement.execute("UPDATE t_island SET level=" + newLevel + " WHERE name='" + MySQL.getIslandNameByPlayer(p.getName()) + "';");
+                    }catch(Exception e){throw new RuntimeException(e);}
+                }
 
                 //cmd de test pour afficher rapidement des valeurs ou faire en vitesse des tests TJR LAISSER A LA FIN DU SWITCH
                 case "test" -> {
                     if(!p.isOp()) return false;
-                    p.openInventory(guis.managePlayer("Kitsoko"));
+                    setClassementHolo(p);
                 }
 
                 default -> {
@@ -470,16 +501,18 @@ public class oneblock implements CommandExecutor {
         int x = MySQL.getInformationByNameInt(islandName, "t_island", "center_x");
         int y = MySQL.getInformationByNameInt(islandName, "t_island", "center_y");
         int z = MySQL.getInformationByNameInt(islandName, "t_island", "center_z");
-        int prestigeLvl = MySQL.getInformationByNameInt(islandName, "t_island", "prestige_level");
         Location loc = new Location(Bukkit.getWorld("islands"), x, y + 2, z);
         p.teleport(loc);
-        int borderSize = switch(prestigeLvl){
-            case 2 -> 100;
-            case 3 -> 150;
-            case 4 -> 250;
-            case 5 -> 400;
-            default -> 50;
-        };
+        int borderSize = Main.INSTANCE.radiusLevel.get(MySQL.getIslandPrestigeByPlayer(p))*2;
         Main.INSTANCE.worldBorderApi.setBorder(p, borderSize, loc);
+    }
+
+    public static void setClassementHolo(Player p){
+        ArmorStand holo = (ArmorStand) p.getLocation().getWorld().spawnEntity(p.getLocation(), EntityType.ARMOR_STAND);
+        holo.setGravity(false);
+        holo.setCanPickupItems(false);
+        holo.setCustomName("okok");
+        holo.setCustomNameVisible(true);
+        holo.setVisible(false);
     }
 }

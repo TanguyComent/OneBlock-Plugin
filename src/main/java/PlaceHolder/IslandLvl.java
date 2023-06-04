@@ -26,6 +26,7 @@ public class IslandLvl extends PlaceholderExpansion {
     @Override
     public @Nullable String onRequest(OfflinePlayer player, @NotNull String params) {
         if(player == null) return "";
+        if(!MySQL.getPlayerHaveAnIsland(player.getPlayer())) return "no island";
         return "" + MySQL.getIslandLevelByPlayer(player.getPlayer());
     }
 }

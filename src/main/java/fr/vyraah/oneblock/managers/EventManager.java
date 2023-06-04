@@ -1,6 +1,7 @@
 package fr.vyraah.oneblock.managers;
 
 import fr.vyraah.oneblock.Listeners.BreakBlock;
+import fr.vyraah.oneblock.Listeners.Wells;
 import fr.vyraah.oneblock.Main;
 import fr.vyraah.oneblock.guis.GuisEvents;
 import org.bukkit.Bukkit;
@@ -20,5 +21,6 @@ public class EventManager {
         // pm.registerEvents(new EventName(), plugin); <== EXEMPLE
         pm.registerEvents(new GuisEvents(), plugin);
         pm.registerEvents(new BreakBlock(), plugin);
+        pm.registerEvents(new Wells(), plugin);
     }
 }

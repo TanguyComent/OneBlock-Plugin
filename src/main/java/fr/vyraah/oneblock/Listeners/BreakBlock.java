@@ -3,13 +3,14 @@ package fr.vyraah.oneblock.Listeners;
 import fr.vyraah.oneblock.Main;
 import fr.vyraah.oneblock.SQL.MySQL;
 import fr.vyraah.oneblock.commands.oneblock;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.EntityType;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -26,6 +27,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.RayTraceResult;
 
 import java.sql.Statement;
 import java.util.Objects;
@@ -50,7 +52,7 @@ public class BreakBlock implements Listener {
                 Bukkit.getWorld("islands").dropItem(new Location(bl.getWorld(), bl.getX(), bl.getY() + 1, bl.getZ()), it);
             }
             ItemMeta meta = p.getInventory().getItemInMainHand().getItemMeta();
-            if(meta instanceof Damageable d){
+            if(meta instanceof Damageable d && !p.getGameMode().equals(GameMode.CREATIVE)){
                 Random r = new Random();
                 if(!meta.hasEnchant(Enchantment.DURABILITY)) {
                     d.setDamage(((Damageable) meta).getDamage() + 1);
@@ -96,6 +98,13 @@ public class BreakBlock implements Listener {
                 obLocation.getBlock().setType(Material.COAL_ORE);
             }
         }
+    }
+
+    @EventHandler
+    public void onHit(EntityDamageByEntityEvent e){
+        if(e.getDamager().getType() != EntityType.PLAYER) return;
+        if(e.getEntity().getType() != EntityType.ARMOR_STAND) return;
+        e.getEntity().remove();
     }
 
     @EventHandler

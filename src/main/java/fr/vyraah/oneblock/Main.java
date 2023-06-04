@@ -3,14 +3,25 @@ package fr.vyraah.oneblock;
 import PlaceHolder.IslandLvl;
 import com.github.yannicklamprecht.worldborder.api.WorldBorderApi;
 import fr.vyraah.oneblock.SQL.MySQL;
+import fr.vyraah.oneblock.commons.FileC;
 import fr.vyraah.oneblock.managers.CommandsManager;
 import fr.vyraah.oneblock.managers.EventManager;
 import me.arcaniax.hdb.api.HeadDatabaseAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.yaml.snakeyaml.Yaml;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
 
 public final class Main extends JavaPlugin {
 
@@ -21,6 +32,10 @@ public final class Main extends JavaPlugin {
     public static Location spawn;
     public MySQL mysql = new MySQL();
     public static HeadDatabaseAPI head;
+    public HashMap<Material, Integer> levelItems = new HashMap<>();
+    public HashMap<Integer, Integer> radiusLevel = new HashMap<>();
+    public HashMap<Material, Integer> wells = new HashMap<>();
+
     @Override
     public void onEnable() {
 
@@ -126,9 +141,43 @@ public final class Main extends JavaPlugin {
             new IslandLvl().register();
         }
 
-        //
+        // HeadDB
 
         head = new HeadDatabaseAPI();
+
+        // Initialisation of the blocks levels
+
+        FileC.createFile("level-settings");
+        try {
+            InputStream inputStream = new FileInputStream(FileC.getFile("level-settings"));
+            Yaml yaml = new Yaml();
+            HashMap<String, Integer> map = yaml.load(inputStream);
+            if(map != null)
+                map.forEach((key, value) -> levelItems.put(Material.getMaterial(key.toUpperCase()), value));
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+
+        // Initialisation of the wells
+
+        FileC.createFile("wells-settings");
+        try{
+            InputStream inputStream = new FileInputStream(FileC.getFile("wells-settings"));
+            Yaml yaml = new Yaml();
+            HashMap<String, Integer> map = yaml.load(inputStream);
+            if(map != null)
+                map.forEach((key, value) -> wells.put(Material.getMaterial(key.toUpperCase()), value));
+        }catch(Exception e){
+            throw new RuntimeException(e);
+        }
+
+        // Configuration du radius
+
+        radiusLevel.put(1, 25);
+        radiusLevel.put(2, 50);
+        radiusLevel.put(3, 75);
+        radiusLevel.put(4, 125);
+        radiusLevel.put(5, 200);
     }
 
     @Override

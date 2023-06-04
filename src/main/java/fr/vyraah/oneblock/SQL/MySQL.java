@@ -68,13 +68,7 @@ public class MySQL {
         int z = getInformationByNameInt(getIslandNameByPlayer(p.getName()), "t_island", "center_z");
         int px = (int) loc.getX();
         int pz = (int) loc.getZ();
-        int radius = switch(getInformationByNameInt(getIslandNameByPlayer(p.getName()), "t_island", "prestige_level")){
-            case 2 -> 50;
-            case 3 -> 75;
-            case 4 -> 125;
-            case 5 -> 200;
-            default -> 25;
-        };
+        int radius = Main.INSTANCE.radiusLevel.get(MySQL.getIslandPrestigeByPlayer(p));
         return px <= x + radius && px >= x - radius && pz <= z + radius && pz >= z - radius;
     }
 
@@ -138,6 +132,10 @@ public class MySQL {
         return new Location(Bukkit.getWorld("islands"), getInformationByNameInt(isName, "t_island", "spawn_x"), getInformationByNameInt(isName, "t_island", "spawn_y"), getInformationByNameInt(isName, "t_island", "spawn_z"));
     }
 
+    public static Location getCenterLocationByIslandName(String isName){
+        return new Location(Bukkit.getWorld("islands"), getInformationByNameInt(isName, "t_island", "center_x"), getInformationByNameInt(isName, "t_island", "center_y"), getInformationByNameInt(isName, "t_island", "center_z"));
+    }
+
     public static int howManyPlayersHasIsland(String islandName){
         int nbr = 0;
         try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
@@ -146,6 +144,28 @@ public class MySQL {
                 nbr = result.getInt("nbr");
             }
         }catch(Exception e){}
+        return nbr;
+    }
+
+    public static ArrayList<Location> getWellsList(String islandName){
+        ArrayList<Location> wells = new ArrayList<>();
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            ResultSet result = statement.executeQuery("SELECT x, y, z FROM t_wells WHERE island_name='" + islandName + "';");
+            while(result.next()){
+                wells.add(new Location(Bukkit.getWorld("islands"), result.getInt("x"), result.getInt("y"), result.getInt("z")));
+            }
+        }catch (Exception e){}
+        return wells;
+    }
+    public static int getWellNbr(Location wellLoc){
+        int nbr = -1;
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            ResultSet result = statement.executeQuery(String.format("SELECT number AS nbr FROM t_wells WHERE x=%d AND y=%d AND z=%d;",
+                    (int) wellLoc.getX(), (int) wellLoc.getY(), (int) wellLoc.getZ()));
+            while(result.next()){
+                nbr = result.getInt("nbr");
+            }
+        }catch (Exception e){}
         return nbr;
     }
 
@@ -189,8 +209,15 @@ public class MySQL {
             try{statement.execute("ALTER TABLE t_island_warp ADD yaw INT NOT NULL;");}catch(Exception e){}
             try{statement.execute("ALTER TABLE t_island_warp ADD pitch INT NOT NULL;");}catch(Exception e){}
             //création de la table des island ban
-            try{statement.execute("CREATE TABLE t_island_ban (island_id int NOT NULL);");}catch(Exception e){}
+            try{statement.execute("CREATE TABLE t_island_ban (island_id INT NOT NULL);");}catch(Exception e){}
             try{statement.execute("ALTER TABLE t_island_ban ADD banned_player VARCHAR(20);");}catch(Exception e){}
+            //création de la table des puits
+            try{statement.execute("CREATE TABLE t_wells (island_name VARCHAR(500) NOT NULL);");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_wells ADD material VARCHAR(100) NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_wells ADD number INT DEFAULT 1;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_wells ADD x INT NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_wells ADD y INT NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_wells ADD z INT NOT NULL;");}catch(Exception e){}
         }catch(Exception e){
             throw new RuntimeException(e);
         }

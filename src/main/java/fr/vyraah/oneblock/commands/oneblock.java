@@ -458,7 +458,7 @@ public class oneblock implements CommandExecutor {
                 }
 
                 //cmd /is calculate
-                case "calculate" -> {
+                case "calculate", "calc" -> {
                     if(!MySQL.getPlayerHaveAnIsland(p)){
                         p.sendMessage(prefix + "§4vous n'avez pas d'ile !");
                         return false;

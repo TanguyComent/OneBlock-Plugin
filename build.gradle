@@ -58,3 +58,11 @@ processResources {
 }
 
 compileJava.options.encoding = 'UTF-8'
+jar{
+    apply plugin: 'java'
+    tasks.withType(Jar).tap {
+        configureEach {
+            destinationDir = file("C:\\Users\\Tanguy\\Desktop\\local minecraft servers\\spigot 1.18.2\\plugins")
+        }
+    }
+}

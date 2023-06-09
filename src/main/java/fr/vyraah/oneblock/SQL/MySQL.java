@@ -63,6 +63,7 @@ public class MySQL {
     }
 
     public static boolean isLocationIsInPlayerIsland(Player p, Location loc){
+        if(!getPlayerHaveAnIsland(p)) return false;
         if(!loc.getWorld().getName().equals("islands")) return false;
         int x = getInformationByNameInt(getIslandNameByPlayer(p.getName()), "t_island", "center_x");
         int z = getInformationByNameInt(getIslandNameByPlayer(p.getName()), "t_island", "center_z");

@@ -1,13 +1,8 @@
 package fr.vyraah.oneblock.commands;
 
-import com.github.yannicklamprecht.worldborder.api.BorderAPI;
-import com.github.yannicklamprecht.worldborder.api.WorldBorderApi;
 import fr.vyraah.oneblock.Main;
 import fr.vyraah.oneblock.SQL.MySQL;
-import fr.vyraah.oneblock.guis.GuisItems;
 import fr.vyraah.oneblock.guis.guis;
-import me.arcaniax.hdb.api.HeadDatabaseAPI;
-import net.kyori.adventure.text.Component;
 import net.md_5.bungee.api.chat.*;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.*;
@@ -20,14 +15,12 @@ import org.bukkit.entity.Player;
 import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
 
-import java.awt.*;
-import java.awt.Color;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class oneblock implements CommandExecutor {
 
@@ -465,18 +458,25 @@ public class oneblock implements CommandExecutor {
                     }
                     Location middle = MySQL.getCenterLocationByIslandName(MySQL.getIslandNameByPlayer(p.getName()));
                     int radius = Main.INSTANCE.radiusLevel.get(MySQL.getIslandPrestigeByPlayer(p));
-                    int newLevel = 0;
+                    AtomicInteger newLevel = new AtomicInteger();
                     p.sendMessage(prefix + "§2Début du calcul du niveau d'ile...");
                     for(int y = -60; y < 320; y++){
                         for(int x = (int) middle.getX()-radius; x < middle.getX()+radius; x++){
                             for(int z = (int) middle.getZ()-radius; z < middle.getZ()+radius; z++){
                                 Location toCheck = new Location(Bukkit.getWorld("islands"), x, y, z);
                                 if(Main.INSTANCE.levelItems.containsKey(toCheck.getBlock().getType())){
-                                    newLevel += Main.INSTANCE.levelItems.get(toCheck.getBlock().getType());
+                                    newLevel.addAndGet(Main.INSTANCE.levelItems.get(toCheck.getBlock().getType()));
                                 }
                             }
                         }
                     }
+                    ArrayList<ArrayList<Object>> wells = MySQL.getWellsInformation(MySQL.getIslandNameByPlayer(p.getName()));
+                    wells.forEach((wls) -> {
+                        Material mat = Material.getMaterial((String) wls.get(0));
+                        int amount = (int) wls.get(1) - 1;
+                        int level = Main.INSTANCE.levelItems.get(mat);
+                        newLevel.addAndGet(amount * level);
+                    });
                     p.sendMessage(prefix + "§2Calcul terminée ! Nouveau niveau : §6" + newLevel);
                     try(Statement statement = Main.INSTANCE.mysql.getConnection().createStatement()){
                         statement.execute("UPDATE t_island SET level=" + newLevel + " WHERE name='" + MySQL.getIslandNameByPlayer(p.getName()) + "';");
@@ -508,11 +508,21 @@ public class oneblock implements CommandExecutor {
     }
 
     public static void setClassementHolo(Player p){
-        ArmorStand holo = (ArmorStand) p.getLocation().getWorld().spawnEntity(p.getLocation(), EntityType.ARMOR_STAND);
+        Location loc = p.getLocation();
+        ArmorStand holo = (ArmorStand) p.getLocation().getWorld().spawnEntity(loc.add(0, .2, 0), EntityType.ARMOR_STAND);
         holo.setGravity(false);
         holo.setCanPickupItems(false);
-        holo.setCustomName("okok");
+        holo.setCustomName("§6Les §ameilleurs iles §6du server !");
         holo.setCustomNameVisible(true);
         holo.setVisible(false);
+        ArrayList<ArrayList<Object>> isTop = MySQL.getIslandTop();
+        for(int i = 0; i <= 9; i++){
+            ArmorStand top = (ArmorStand) p.getLocation().getWorld().spawnEntity(loc.add(0, -.2, 0), EntityType.ARMOR_STAND);
+            holo.setGravity(false);
+            holo.setCanPickupItems(false);
+            holo.setCustomName("§6" + i + 1 + " §a: " + isTop.get(i).get(0) + " §6niveau §a" + isTop.get(i).get(1));
+            holo.setCustomNameVisible(true);
+            holo.setVisible(false);
+        }
     }
 }

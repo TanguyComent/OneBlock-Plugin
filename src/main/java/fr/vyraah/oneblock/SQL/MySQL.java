@@ -158,6 +158,7 @@ public class MySQL {
         }catch (Exception e){}
         return wells;
     }
+
     public static int getWellNbr(Location wellLoc){
         int nbr = -1;
         try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
@@ -168,6 +169,38 @@ public class MySQL {
             }
         }catch (Exception e){}
         return nbr;
+    }
+
+    public static ArrayList<ArrayList<Object>> getWellsInformation(String islandName){
+        ArrayList<Location> wellLoc = getWellsList(islandName);
+        ArrayList<ArrayList<Object>> wellsInfo = new ArrayList<>();
+        wellLoc.forEach((loc) -> {
+            try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+                ResultSet result = statement.executeQuery(String.format("SELECT material AS mat, number AS nbr WHERE x=%d AND y=%d AND z=%d",
+                        (int) loc.getX(), (int) loc.getY(), (int) loc.getZ()));
+                ArrayList<Object> info = new ArrayList<>();
+                while(result.next()){
+                    info.add(result.getString("mat"));
+                    info.add(result.getInt("nbr"));
+                }
+                wellsInfo.add(info);
+            }catch(Exception e){throw new RuntimeException(e);}
+        });
+        return wellsInfo;
+    }
+
+    public static ArrayList<ArrayList<Object>> getIslandTop(){
+        ArrayList<ArrayList<Object>> islandTop = new ArrayList<>();
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            ResultSet result = statement.executeQuery("SELECT name, level FROM t_island ORDER BY level;");
+            while(result.next()){
+                ArrayList<Object> island = new ArrayList<>();
+                island.add(result.getString("name"));
+                island.add(result.getInt("level"));
+                islandTop.add(island);
+            }
+        }catch(Exception e){throw new RuntimeException(e);}
+        return islandTop;
     }
 
     // =========================================================================================

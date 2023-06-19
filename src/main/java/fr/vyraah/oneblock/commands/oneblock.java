@@ -2,6 +2,7 @@ package fr.vyraah.oneblock.commands;
 
 import fr.vyraah.oneblock.Main;
 import fr.vyraah.oneblock.SQL.MySQL;
+import fr.vyraah.oneblock.commons.FileC;
 import fr.vyraah.oneblock.guis.guis;
 import net.md_5.bungee.api.chat.*;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -9,6 +10,7 @@ import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -20,6 +22,7 @@ import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class oneblock implements CommandExecutor {
@@ -486,7 +489,19 @@ public class oneblock implements CommandExecutor {
                 //cmd de test pour afficher rapidement des valeurs ou faire en vitesse des tests TJR LAISSER A LA FIN DU SWITCH
                 case "test" -> {
                     if(!p.isOp()) return false;
-                    setClassementHolo(p);
+                }
+
+                //PARTIE MODERATEUR
+
+                //cmd /is setholotop
+
+                case "setholotop" -> {
+                    if(!p.isOp()) return false;
+                    Location location = setClassementHolo(p.getLocation());
+                    try(Statement statement = Main.INSTANCE.mysql.getConnection().createStatement()){
+                        statement.execute("INSERT INTO t_holo (x, y, z, type, world) VALUES (" + location.getX() + ", " + p.getLocation().getY() + ", " + location.getZ() +" , \"sb\", \"" + location.getWorld().getName() + "\");");
+                    }catch(Exception e){throw new RuntimeException(e);}
+                    p.sendMessage(prefix + "§2Classement mis !");
                 }
 
                 default -> {
@@ -503,13 +518,13 @@ public class oneblock implements CommandExecutor {
         int z = MySQL.getInformationByNameInt(islandName, "t_island", "center_z");
         Location loc = new Location(Bukkit.getWorld("islands"), x, y + 2, z);
         p.teleport(loc);
-        int borderSize = Main.INSTANCE.radiusLevel.get(MySQL.getIslandPrestigeByPlayer(p))*2;
+        int borderSize = Main.INSTANCE.radiusLevel.get(MySQL.getIslandPrestigeByIslandName(islandName))*2;
         Main.INSTANCE.worldBorderApi.setBorder(p, borderSize, loc);
     }
 
-    public static void setClassementHolo(Player p){
-        Location loc = p.getLocation();
-        ArmorStand holo = (ArmorStand) p.getLocation().getWorld().spawnEntity(loc.add(0, .2, 0), EntityType.ARMOR_STAND);
+    public static Location setClassementHolo(Location location){
+        location = location.getBlock().getLocation();
+        ArmorStand holo = (ArmorStand) location.getWorld().spawnEntity(location.add(.5, 1.3, .5), EntityType.ARMOR_STAND);
         holo.setGravity(false);
         holo.setCanPickupItems(false);
         holo.setCustomName("§6Les §ameilleurs iles §6du server !");
@@ -517,12 +532,17 @@ public class oneblock implements CommandExecutor {
         holo.setVisible(false);
         ArrayList<ArrayList<Object>> isTop = MySQL.getIslandTop();
         for(int i = 0; i <= 9; i++){
-            ArmorStand top = (ArmorStand) p.getLocation().getWorld().spawnEntity(loc.add(0, -.2, 0), EntityType.ARMOR_STAND);
-            holo.setGravity(false);
-            holo.setCanPickupItems(false);
-            holo.setCustomName("§6" + i + 1 + " §a: " + isTop.get(i).get(0) + " §6niveau §a" + isTop.get(i).get(1));
-            holo.setCustomNameVisible(true);
-            holo.setVisible(false);
+            ArmorStand top = (ArmorStand) location.getWorld().spawnEntity(location.add(0, -.3, 0), EntityType.ARMOR_STAND);
+            top.setGravity(false);
+            top.setCanPickupItems(false);
+            try {
+                top.setCustomName("§6" + (i + 1) + " §a: " + isTop.get(i).get(0) + " §6niveau §a" + isTop.get(i).get(1));
+            }catch(IndexOutOfBoundsException e){
+                top.setCustomName("§6" + (i + 1) + " §a: Null");
+            }
+            top.setCustomNameVisible(true);
+            top.setVisible(false);
         }
+        return location;
     }
 }

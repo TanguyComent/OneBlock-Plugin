@@ -1,6 +1,7 @@
-package fr.vyraah.oneblock.guis;
+package fr.vyraah.oneblock.Listeners;
 
 import fr.vyraah.oneblock.SQL.MySQL;
+import fr.vyraah.oneblock.guis.guis;
 import org.bukkit.ChatColor;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;

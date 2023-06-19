@@ -141,4 +141,210 @@ public class GuisItems {
         return it.toItemStack();
     }
 
+    //ob phase gui items
+
+    public static ItemStack phaseOne(){
+        ItemBuilder it = new ItemBuilder(Material.GRASS_BLOCK);
+        it.setName("§2Plaine");
+        it.setLore("§eClick pour sélectionner");
+
+        return it.toItemStack();
+    }
+
+    public static ItemStack phaseTwo(Player p){
+        ItemBuilder it;
+        if(MySQL.getObTimesBreak(MySQL.getIslandNameByPlayer(p.getName())) >= 1000) {
+            it = new ItemBuilder(Material.OAK_LOG);
+            it.setName("§2Foret");
+            it.setLore("§eClick pour sélectionner");
+        }else{
+            it = new ItemBuilder(Material.BARRIER);
+            it.setName("§4Lock");
+            it.setLore("§4Biome débloquer au §e1000 §4blocs cassés !");
+        }
+        return it.toItemStack();
+    }
+
+    public static ItemStack phaseThree(Player p) {
+        ItemBuilder it;
+        if (MySQL.getObTimesBreak(MySQL.getIslandNameByPlayer(p.getName())) >= 2000) {
+            it = new ItemBuilder(Material.DARK_OAK_LOG);
+            it.setName("§2Foret noir");
+            it.setLore("§eClick pour sélectionner");
+        } else {
+            it = new ItemBuilder(Material.BARRIER);
+            it.setName("§4Lock");
+            it.setLore("§4Biome débloquer au §e2000 §4blocs cassés !");
+        }
+        return it.toItemStack();
+    }
+
+    public static ItemStack phaseFour(Player p){
+        ItemBuilder it;
+        if(MySQL.getObTimesBreak(MySQL.getIslandNameByPlayer(p.getName())) >= 3000) {
+            it = new ItemBuilder(Material.ACACIA_LOG);
+            it.setName("§2Taiga");
+            it.setLore("§eClick pour sélectionner");
+        }else{
+            it = new ItemBuilder(Material.BARRIER);
+            it.setName("§4Lock");
+            it.setLore("§4Biome débloquer au §e3000 §4blocs cassés !");
+        }
+        return it.toItemStack();
+    }
+
+    public static ItemStack phaseFive(Player p){
+        ItemBuilder it;
+        if(MySQL.getObTimesBreak(MySQL.getIslandNameByPlayer(p.getName())) >= 4000) {
+            it = new ItemBuilder(Material.JUNGLE_LOG);
+            it.setName("§2Jungle");
+            it.setLore("§eClick pour sélectionner");
+        }else{
+            it = new ItemBuilder(Material.BARRIER);
+            it.setName("§4Lock");
+            it.setLore("§4Biome débloquer au §e4000 §4blocs cassés !");
+        }
+        return it.toItemStack();
+    }
+
+    public static ItemStack phaseSix(Player p){
+        ItemBuilder it;
+        if(MySQL.getObTimesBreak(MySQL.getIslandNameByPlayer(p.getName())) >= 5000) {
+            it = new ItemBuilder(Material.SNOW_BLOCK);
+            it.setName("§2Neige");
+            it.setLore("§eClick pour sélectionner");
+        }else{
+            it = new ItemBuilder(Material.BARRIER);
+            it.setName("§4Lock");
+            it.setLore("§4Biome débloquer au §e5000 §4blocs cassés !");
+        }
+        return it.toItemStack();
+    }
+
+    public static ItemStack phaseSeven(Player p){
+        ItemBuilder it;
+        if(MySQL.getObTimesBreak(MySQL.getIslandNameByPlayer(p.getName())) >= 6000) {
+            it = new ItemBuilder(Material.PACKED_ICE);
+            it.setName("§2Glace");
+            it.setLore("§eClick pour sélectionner");
+        }else{
+            it = new ItemBuilder(Material.BARRIER);
+            it.setName("§4Lock");
+            it.setLore("§4Biome débloquer au §e6000 §4blocs cassés !");
+        }
+        return it.toItemStack();
+    }
+
+    public static ItemStack phaseEight(Player p){
+        ItemBuilder it;
+        if(MySQL.getObTimesBreak(MySQL.getIslandNameByPlayer(p.getName())) >= 7000) {
+            it = new ItemBuilder(Material.SAND);
+            it.setName("§2Desert");
+            it.setLore("§eClick pour sélectionner");
+        }else{
+            it = new ItemBuilder(Material.BARRIER);
+            it.setName("§4Lock");
+            it.setLore("§4Biome débloquer au §e7000 §4blocs cassés !");
+        }
+        return it.toItemStack();
+    }
+
+    public static ItemStack phaseNine(Player p){
+        ItemBuilder it;
+        if(MySQL.getObTimesBreak(MySQL.getIslandNameByPlayer(p.getName())) >= 8000) {
+            it = new ItemBuilder(Material.ORANGE_TERRACOTTA);
+            it.setName("§2Canione");
+            it.setLore("§eClick pour sélectionner");
+        }else{
+            it = new ItemBuilder(Material.BARRIER);
+            it.setName("§4Lock");
+            it.setLore("§4Biome débloquer au §e8000 §4blocs cassés !");
+        }
+        return it.toItemStack();
+    }
+
+    public static ItemStack phaseTen(Player p){
+        ItemBuilder it;
+        if(MySQL.getObTimesBreak(MySQL.getIslandNameByPlayer(p.getName())) >= 9000) {
+            it = new ItemBuilder(Material.WATER_BUCKET);
+            it.setName("§2Mer");
+            it.setLore("§eClick pour sélectionner");
+        }else{
+            it = new ItemBuilder(Material.BARRIER);
+            it.setName("§4Lock");
+            it.setLore("§4Biome débloquer au §e9000 §4blocs cassés !");
+        }
+        return it.toItemStack();
+    }
+
+    public static ItemStack phaseEleven(Player p){
+        ItemBuilder it;
+        if(MySQL.getObTimesBreak(MySQL.getIslandNameByPlayer(p.getName())) >= 10000) {
+            it = new ItemBuilder(Material.CRIMSON_STEM);
+            it.setName("§2Nether rouge");
+            it.setLore("§eClick pour sélectionner");
+        }else{
+            it = new ItemBuilder(Material.BARRIER);
+            it.setName("§4Lock");
+            it.setLore("§4Biome débloquer au §e10000 §4blocs cassés !");
+        }
+        return it.toItemStack();
+    }
+
+    public static ItemStack phaseTwelve(Player p){
+        ItemBuilder it;
+        if(MySQL.getObTimesBreak(MySQL.getIslandNameByPlayer(p.getName())) >= 11000) {
+            it = new ItemBuilder(Material.WARPED_STEM);
+            it.setName("§2Nether bleu");
+            it.setLore("§eClick pour sélectionner");
+        }else{
+            it = new ItemBuilder(Material.BARRIER);
+            it.setName("§4Lock");
+            it.setLore("§4Biome débloquer au §e11000 §4blocs cassés !");
+        }
+        return it.toItemStack();
+    }
+
+    public static ItemStack phaseThirteen(Player p){
+        ItemBuilder it;
+        if(MySQL.getObTimesBreak(MySQL.getIslandNameByPlayer(p.getName())) >= 12000) {
+            it = new ItemBuilder(Material.BASALT);
+            it.setName("§2Basalt");
+            it.setLore("§eClick pour sélectionner");
+        }else{
+            it = new ItemBuilder(Material.BARRIER);
+            it.setName("§4Lock");
+            it.setLore("§4Biome débloquer au §e12000 §4blocs cassés !");
+        }
+        return it.toItemStack();
+    }
+
+    public static ItemStack phaseFourteen(Player p){
+        ItemBuilder it;
+        if(MySQL.getObTimesBreak(MySQL.getIslandNameByPlayer(p.getName())) >= 13000) {
+            it = new ItemBuilder(Material.END_STONE);
+            it.setName("§2Ender");
+            it.setLore("§eClick pour sélectionner");
+        }else{
+            it = new ItemBuilder(Material.BARRIER);
+            it.setName("§4Lock");
+            it.setLore("§4Biome débloquer au §e13000 §4blocs cassés !");
+        }
+        return it.toItemStack();
+    }
+
+    public static ItemStack phaseFifteen(Player p){
+        ItemBuilder it;
+        if(MySQL.getObTimesBreak(MySQL.getIslandNameByPlayer(p.getName())) >= 14000) {
+            it = new ItemBuilder(Material.RED_MUSHROOM);
+            it.setName("§2Biome champignon");
+            it.setLore("§eClick pour sélectionner");
+        }else{
+            it = new ItemBuilder(Material.BARRIER);
+            it.setName("§4Lock");
+            it.setLore("§4Biome débloquer au §e14000 §4blocs cassés !");
+        }
+        return it.toItemStack();
+    }
+
 }

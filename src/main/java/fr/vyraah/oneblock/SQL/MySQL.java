@@ -103,6 +103,10 @@ public class MySQL {
         return getInformationByNameInt(getIslandNameByPlayer(p.getName()), "t_island", "prestige_level");
     }
 
+    public static int getIslandPrestigeByIslandName(String islandName){
+        return getInformationByNameInt(islandName, "t_island", "prestige_level");
+    }
+
     public static ArrayList<String> getIslandPlayers(String islandName){
         ArrayList<String> players = new ArrayList<>();
         try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
@@ -176,7 +180,7 @@ public class MySQL {
         ArrayList<ArrayList<Object>> wellsInfo = new ArrayList<>();
         wellLoc.forEach((loc) -> {
             try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
-                ResultSet result = statement.executeQuery(String.format("SELECT material AS mat, number AS nbr WHERE x=%d AND y=%d AND z=%d",
+                ResultSet result = statement.executeQuery(String.format("SELECT material AS mat, number AS nbr FROM t_wells WHERE x=%d AND y=%d AND z=%d;",
                         (int) loc.getX(), (int) loc.getY(), (int) loc.getZ()));
                 ArrayList<Object> info = new ArrayList<>();
                 while(result.next()){
@@ -203,6 +207,28 @@ public class MySQL {
         return islandTop;
     }
 
+    public static ArrayList<Location> getScoreboard(){
+        ArrayList<Location> sbs = new ArrayList<>();
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            ResultSet result = statement.executeQuery("SELECT x, z, world, y FROM t_holo WHERE type=\"sb\";");
+            while(result.next()){
+                sbs.add(new Location(Bukkit.getWorld(result.getString("world")), result.getFloat("x"), result.getFloat("y"), result.getFloat("z")));
+            }
+        }catch(Exception e){}
+        return sbs;
+    }
+
+    public static int getObTimesBreak(String islandName){
+        int times = 0;
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            ResultSet result = statement.executeQuery("SELECT ob_time_break AS br FROM t_island WHERE name=\"" + islandName + "\";");
+            while(result.next()){
+                times = result.getInt("br");
+            }
+        }catch(Exception e){}
+        return times;
+    }
+
     // =========================================================================================
     //                             CONNECTION & DECONNEXION DE LA DB
     // =========================================================================================
@@ -215,6 +241,8 @@ public class MySQL {
             try{statement.execute("ALTER TABLE t_island ADD name VARCHAR(500) NOT NULL UNIQUE;");}catch(Exception e){}
             try{statement.execute("ALTER TABLE t_island ADD prestige_level INT NOT NULL DEFAULT 1;");}catch(Exception e){}
             try{statement.execute("ALTER TABLE t_island ADD level FLOAT NOT NULL DEFAULT 0;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD ob_time_break INT NOT NULL DEFAULT 0;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD active_phase VARCHAR(100) NOT NULL DEFAULT 0;");}catch(Exception e){}
             try{statement.execute("ALTER TABLE t_island ADD center_x INT NOT NULL;");}catch(Exception e){}
             try{statement.execute("ALTER TABLE t_island ADD center_y INT NOT NULL;");}catch(Exception e){}
             try{statement.execute("ALTER TABLE t_island ADD center_z INT NOT NULL;");}catch(Exception e){}
@@ -252,6 +280,12 @@ public class MySQL {
             try{statement.execute("ALTER TABLE t_wells ADD x INT NOT NULL;");}catch(Exception e){}
             try{statement.execute("ALTER TABLE t_wells ADD y INT NOT NULL;");}catch(Exception e){}
             try{statement.execute("ALTER TABLE t_wells ADD z INT NOT NULL;");}catch(Exception e){}
+            //création de la table des holograms
+            try{statement.execute("CREATE TABLE t_holo (x FLOAT NOT NULL);");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_holo ADD y FLOAT NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_holo ADD z FLOAT NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_holo ADD world VARCHAR(100) NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_holo ADD type VARCHAR(100) NOT NULL;");}catch(Exception e){}
         }catch(Exception e){
             throw new RuntimeException(e);
         }
@@ -262,8 +296,8 @@ public class MySQL {
             try{
                 conn = DriverManager.getConnection("jdbc:mysql://" + host + ":" + port + "/" + database + "?useSSL=false", user, password);
                 Bukkit.getServer().getConsoleSender().sendMessage("[Vyraah-OneBlock] - Connexion de la base de donnée effectué !");
-            } catch (SQLException e){
-                e.printStackTrace();
+            }catch(SQLException e){
+                throw new RuntimeException(e);
             }
         }
     }

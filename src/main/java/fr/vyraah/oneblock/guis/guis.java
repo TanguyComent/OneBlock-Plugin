@@ -81,6 +81,22 @@ public class guis {
         return inv;
     }
 
+    public static Inventory isParams(){
+        Inventory inv = Bukkit.createInventory(null, 54);
+        return inv;
+    }
+
+    public static Inventory obPhases(){
+        Inventory inv = Bukkit.createInventory(null, 45);
+        inv.setItem(28, GuisItems.phaseOne());
+        return inv;
+    }
+
+    public static Inventory obPrestige(){
+        Inventory inv = Bukkit.createInventory(null, 54);
+        return inv;
+    }
+
     public static ItemStack getPlayerHead(String playerName){
         ItemStack it = new ItemStack(Material.PLAYER_HEAD, 1);
         SkullMeta meta = (SkullMeta) it.getItemMeta();

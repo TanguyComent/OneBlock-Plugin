@@ -2,42 +2,35 @@ package fr.vyraah.oneblock.Listeners;
 
 import fr.vyraah.oneblock.Main;
 import fr.vyraah.oneblock.SQL.MySQL;
-import fr.vyraah.oneblock.commands.oneblock;
-import org.bukkit.*;
+import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
+import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.EntityType;
-import org.bukkit.event.block.Action;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.meta.Damageable;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.player.PlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.util.RayTraceResult;
+import org.jetbrains.annotations.NotNull;
 
-import java.sql.Statement;
-import java.util.Objects;
+import java.net.http.WebSocket;
 import java.util.Random;
 
-public class BreakBlock implements Listener {
+public class OneblockEvent implements Listener {
 
     @EventHandler
     public void blockBreakEvent(BlockBreakEvent e){
-
         Player p = e.getPlayer();
         if(!p.getWorld().getName().equals("islands")) return;
         if(!MySQL.isLocationIsInPlayerIsland(p, e.getBlock().getLocation()) && !p.isOp()) {
@@ -101,13 +94,6 @@ public class BreakBlock implements Listener {
     }
 
     @EventHandler
-    public void onHit(EntityDamageByEntityEvent e){
-        if(e.getDamager().getType() != EntityType.PLAYER) return;
-        if(e.getEntity().getType() != EntityType.ARMOR_STAND) return;
-        e.getEntity().remove();
-    }
-
-    @EventHandler
     public void onPlaceBlock(BlockPlaceEvent e){
         Player p = e.getPlayer();
         Block bl = e.getBlock();
@@ -117,48 +103,10 @@ public class BreakBlock implements Listener {
     }
 
     @EventHandler
-    public void onChat(PlayerChatEvent e){
-        Player p = e.getPlayer();
-        if(p.getPersistentDataContainer().has(NamespacedKey.fromString("is-delete"), PersistentDataType.STRING)){
-            if(e.getMessage().equals("CONFIRMER")){
-                e.setCancelled(true);
-                p.sendMessage("§2Votre ile a bien été supprimée !");
-                //Tp des joueurs present sur l'is au spawn
-                for(Player players : Bukkit.getOnlinePlayers()){
-                    if(players.getLocation().getWorld().equals(Bukkit.getWorld("islands"))){
-                        if(MySQL.getOnWhichIslandIsLocation(players.getLocation()).equals(MySQL.getIslandNameByPlayer(p.getName()))) {
-                            players.teleport(Main.INSTANCE.spawn);
-                            players.sendMessage("§2Vous avez été téleporter au spawn car l'ile sur laquelle vous étiez viens d'être supprimée.");
-                        }
-                    }
-                }
-                //delete island BDD
-                int islandId = MySQL.getInformationByNameInt(MySQL.getIslandNameByPlayer(p.getName()), "t_island", "id");
-                try(Statement statement = Main.INSTANCE.mysql.getConnection().createStatement()){
-                    statement.execute(String.format("DELETE FROM t_island WHERE id=%d;", islandId));
-                    statement.execute(String.format("DELETE FROM t_user WHERE island_id=%d;", islandId));
-                }catch(Exception exception){}
-            }else{
-                p.sendMessage("§4Suppression de l'ile annulée");
-            }
-            p.getPersistentDataContainer().remove(NamespacedKey.fromString("is-delete"));
-        }
-    }
-
-    @EventHandler
     public void fallDamages(EntityDamageEvent e){
         if(e.getEntity() instanceof Player p){
             if(!p.getWorld().equals(Bukkit.getWorld("islands"))) return;
             if(e.getCause() == EntityDamageEvent.DamageCause.FALL) e.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void teleportToIsSpawn(PlayerMoveEvent e){
-        Player p = e.getPlayer();
-        if(!p.getWorld().equals(Bukkit.getWorld("islands"))) return;
-        if(p.getLocation().getY() <= -80){
-            p.teleport(MySQL.getSpawnLocationByIslandName(MySQL.getOnWhichIslandIsLocation(p.getLocation())).add(0, 2, 0));
         }
     }
 
@@ -185,5 +133,14 @@ public class BreakBlock implements Listener {
                 Main.INSTANCE.worldBorderApi.setBorder(p, borderSize, loc);
             }
         }.runTaskLater(Main.INSTANCE, 0);
+    }
+
+    @EventHandler
+    public void teleportToIsSpawn(PlayerMoveEvent e){
+        Player p = e.getPlayer();
+        if(!p.getWorld().equals(Bukkit.getWorld("islands"))) return;
+        if(p.getLocation().getY() <= -80){
+            p.teleport(MySQL.getSpawnLocationByIslandName(MySQL.getOnWhichIslandIsLocation(p.getLocation())).add(0, 2, 0));
+        }
     }
 }

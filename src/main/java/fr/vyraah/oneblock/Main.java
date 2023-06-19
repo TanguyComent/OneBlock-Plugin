@@ -1,8 +1,10 @@
 package fr.vyraah.oneblock;
 
 import PlaceHolder.IslandLvl;
+import PlaceHolder.IslandName;
 import com.github.yannicklamprecht.worldborder.api.WorldBorderApi;
 import fr.vyraah.oneblock.SQL.MySQL;
+import fr.vyraah.oneblock.commands.oneblock;
 import fr.vyraah.oneblock.commons.FileC;
 import fr.vyraah.oneblock.managers.CommandsManager;
 import fr.vyraah.oneblock.managers.EventManager;
@@ -12,16 +14,18 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Entity;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.jetbrains.annotations.NotNull;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public final class Main extends JavaPlugin {
 
@@ -35,6 +39,7 @@ public final class Main extends JavaPlugin {
     public HashMap<Material, Integer> levelItems = new HashMap<>();
     public HashMap<Integer, Integer> radiusLevel = new HashMap<>();
     public HashMap<Material, Integer> wells = new HashMap<>();
+    public ArrayList<Location> scoreboardLocation = new ArrayList<>();
 
     @Override
     public void onEnable() {
@@ -139,6 +144,7 @@ public final class Main extends JavaPlugin {
 
         if(Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new IslandLvl().register();
+            new IslandName().register();
         }
 
         // HeadDB
@@ -170,6 +176,21 @@ public final class Main extends JavaPlugin {
         }catch(Exception e){
             throw new RuntimeException(e);
         }
+
+        //mise a jours des sb
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                ArrayList<Location> sbs = MySQL.getScoreboard();
+                for(Location sb : sbs){
+                    @NotNull Collection<Entity> entities =  sb.getWorld().getNearbyEntities(sb, 0, 10, 0);
+                    entities.forEach(Entity::remove);
+                    oneblock.setClassementHolo(sb);
+                }
+                Bukkit.getLogger().info("[Vyraah] : Classement holographic mis a jours !");
+            }
+        }.runTaskTimer(this, 0, 12000);
 
         // Configuration du radius
 

@@ -2,7 +2,6 @@ package fr.vyraah.oneblock.commands;
 
 import fr.vyraah.oneblock.Main;
 import fr.vyraah.oneblock.SQL.MySQL;
-import fr.vyraah.oneblock.commons.FileC;
 import fr.vyraah.oneblock.guis.guis;
 import net.md_5.bungee.api.chat.*;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -10,7 +9,6 @@ import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -22,7 +20,6 @@ import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class oneblock implements CommandExecutor {
@@ -36,16 +33,20 @@ public class oneblock implements CommandExecutor {
         // IL FAITL A CREATION DE L'ILE AVEC LA CREATION DES VALEURS DANS LA DB :)
 
         if(sender instanceof Player p) {
-            String prefix = net.md_5.bungee.api.ChatColor.of("#fb1010") +"V" + net.md_5.bungee.api.ChatColor.of("#fb3111") + "y" + net.md_5.bungee.api.ChatColor.of("#fc5311") + "r" + net.md_5.bungee.api.ChatColor.of("#fc7412") + "a" + net.md_5.bungee.api.ChatColor.of("#fc9512") + "a" + net.md_5.bungee.api.ChatColor.of("#fdb713") + "h " + net.md_5.bungee.api.ChatColor.of("#fdd813") + "» ";
+
             if(args.length == 0){
                 if(MySQL.getPlayerHaveAnIsland(p)){
                     //ouvrir le pannel
                     p.openInventory(guis.islandInformations(p));
                     return true;
                 }else{
-                    p.sendMessage(prefix + ChatColor.RED + "Tu n'as pas d'ile crée en une grace à la commande /is create <nom>");
+                    p.sendMessage(Main.prefix + ChatColor.RED + "Tu n'as pas d'ile crée en une grace à la commande /is create <nom>");
                     return true;
                 }
+            }
+            if(MySQL.getPlayerHaveAnIsland(p) && !args[0].equalsIgnoreCase("create")){
+                p.sendMessage(Main.prefix + "§4Vous devez avoir une ile pour effectuer cette action !\n" + Main.prefix + "§4Créez une ile grace a la commande /is create <nom>");
+                return false;
             }
             switch (args[0]) {
 
@@ -66,7 +67,7 @@ public class oneblock implements CommandExecutor {
                             %s§b/ob setwarp -> §7Permet de crée un warp d'ile (point de tp accessible à tous) (BETA)
                             %s§b/ob warp <nom du warp> -> §7Permet de se téleporter à un warp d'ile précis (BETA)
                             %s§b/ob warp -> §7ouvre le menu des warps (NON FONCTIONNEL (enfin à moitié))
-                            """, prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix, prefix));
+                            """, Main.prefix, Main.prefix, Main.prefix, Main.prefix, Main.prefix, Main.prefix, Main.prefix, Main.prefix, Main.prefix, Main.prefix, Main.prefix, Main.prefix, Main.prefix));
                     return true;
                 }
 
@@ -74,15 +75,19 @@ public class oneblock implements CommandExecutor {
                 case "create", "cr" -> {
                     //mauvaise utilisation de la commande
                     if (args.length == 1 || args.length > 2) {
-                        p.sendMessage(prefix + ChatColor.RED + "/is create <nom> pour créer une ile");
+                        p.sendMessage(Main.prefix + ChatColor.RED + "/is create <nom> pour créer une ile");
                         return false;
                     }
                     String islandName = args[1];
 
+                    if(islandName.equalsIgnoreCase("error")){
+                        p.sendMessage(Main.prefix + "Ce nom est utilisé par le programme à des fin de détection d'erreur ! Il est par conséquent interdit !\nVous pouvez cependant remplacer des lettres par des chiffres ou rajouter un charactère à la fin !");
+                    }
+
                     //creation des data
 
                     if(MySQL.getPlayerHaveAnIsland(p)){
-                        p.sendMessage(prefix + ChatColor.RED + "tu as deja une ile");
+                        p.sendMessage(Main.prefix + ChatColor.RED + "tu as deja une ile");
                         return false;
                     }
                     int x = Main.INSTANCE.config.getInt("next_island_x");
@@ -100,7 +105,7 @@ public class oneblock implements CommandExecutor {
                         //relation joueur / is
                         int islandId = MySQL.getInformationByNameInt(islandName,"t_island" , "id");
                         if(islandId == 0){
-                            p.sendMessage(prefix + ChatColor.RED + "Erreur lors de la création de l'ile");
+                            p.sendMessage(Main.prefix + ChatColor.RED + "Erreur lors de la création de l'ile");
                             return false;
                         }
                         statement.execute(String.format("""
@@ -108,9 +113,9 @@ public class oneblock implements CommandExecutor {
                                 VALUES ("%s", %d);
                                 """, p.getName(), islandId));
                     }catch (SQLIntegrityConstraintViolationException e){
-                        p.sendMessage(prefix + ChatColor.RED + "Cette ile existe deja, veuiller choisir un autre nom !");
+                        p.sendMessage(Main.prefix + ChatColor.RED + "Cette ile existe deja, veuiller choisir un autre nom !");
                     } catch (Exception e){
-                        p.sendMessage(prefix + ChatColor.RED + "ERREUR INCONNUE : votre ile n'a pas pu etre cree veuillez reessayer");
+                        p.sendMessage(Main.prefix + ChatColor.RED + "ERREUR INCONNUE : votre ile n'a pas pu etre cree veuillez reessayer");
                         return false;
                     }
 
@@ -123,14 +128,14 @@ public class oneblock implements CommandExecutor {
                     Main.INSTANCE.config.set("next_island_x", x);
                     Main.INSTANCE.config.set("next_island_z", z);
                     Main.INSTANCE.saveConfig();
-                    p.sendMessage(prefix + ChatColor.GREEN + "Ton ile a bien ete cree fait /is go pour y etre teleporte !");
+                    p.sendMessage(Main.prefix + ChatColor.GREEN + "Ton ile a bien ete cree fait /is go pour y etre teleporte !");
                     return true;
                 }
 
                 // CMD : /is go
                 case "go", "teleport" -> {
                     if(!MySQL.getPlayerHaveAnIsland(p)){
-                        p.sendMessage(prefix + ChatColor.RED + "Tu n as pas d ile !");
+                        p.sendMessage(Main.prefix + ChatColor.RED + "Tu n as pas d ile !");
                     }
                     teleportPlayerToIsland(p, MySQL.getIslandNameByPlayer(p.getName()));
                     return true;
@@ -139,32 +144,32 @@ public class oneblock implements CommandExecutor {
                 // CMD : /is invite
                 case "invite" -> {
                     if(args.length == 1){
-                        p.sendMessage(prefix + "§4Mauvaise utilisation /is invite <joueur>");
+                        p.sendMessage(Main.prefix + "§4Mauvaise utilisation /is invite <joueur>");
                         return false;
                     }
                     if(MySQL.getIslandPrestigeByPlayer(p) == 1){
                         if(MySQL.howManyPlayersHasIsland(MySQL.getIslandNameByPlayer(p.getName())) >= 5){
-                            p.sendMessage(prefix + "§4Votre ile est pleine, vous devez augmenter votre niveau de prestige pour augmenter le nombre de joueur qu'une ile peut accueillir");
+                            p.sendMessage(Main.prefix + "§4Votre ile est pleine, vous devez augmenter votre niveau de prestige pour augmenter le nombre de joueur qu'une ile peut accueillir");
                             return false;
                         }
                     }else if(MySQL.getIslandPrestigeByPlayer(p) == 2){
                         if(MySQL.howManyPlayersHasIsland(MySQL.getIslandNameByPlayer(p.getName())) >= 6){
-                            p.sendMessage(prefix + "§4Votre ile est pleine, vous devez augmenter votre niveau de prestige pour augmenter le nombre de joueur qu'une ile peut accueillir");
+                            p.sendMessage(Main.prefix + "§4Votre ile est pleine, vous devez augmenter votre niveau de prestige pour augmenter le nombre de joueur qu'une ile peut accueillir");
                             return false;
                         }
                     }else if(MySQL.getIslandPrestigeByPlayer(p) == 3){
                         if(MySQL.howManyPlayersHasIsland(MySQL.getIslandNameByPlayer(p.getName())) >= 7){
-                            p.sendMessage(prefix + "§4Votre ile est pleine, vous devez augmenter votre niveau de prestige pour augmenter le nombre de joueur qu'une ile peut accueillir");
+                            p.sendMessage(Main.prefix + "§4Votre ile est pleine, vous devez augmenter votre niveau de prestige pour augmenter le nombre de joueur qu'une ile peut accueillir");
                             return false;
                         }
                     }else if(MySQL.getIslandPrestigeByPlayer(p) == 4){
                         if(MySQL.howManyPlayersHasIsland(MySQL.getIslandNameByPlayer(p.getName())) >= 8){
-                            p.sendMessage(prefix + "§4Votre ile est pleine, vous devez augmenter votre niveau de prestige pour augmenter le nombre de joueur qu'une ile peut accueillir");
+                            p.sendMessage(Main.prefix + "§4Votre ile est pleine, vous devez augmenter votre niveau de prestige pour augmenter le nombre de joueur qu'une ile peut accueillir");
                             return false;
                         }
                     }else if(MySQL.getIslandPrestigeByPlayer(p) == 5){
                         if(MySQL.howManyPlayersHasIsland(MySQL.getIslandNameByPlayer(p.getName())) >= 9){
-                            p.sendMessage(prefix + "§4Votre ile est pleine.");
+                            p.sendMessage(Main.prefix + "§4Votre ile est pleine.");
                             return false;
                         }
                     }
@@ -177,10 +182,10 @@ public class oneblock implements CommandExecutor {
                                     ResultSet result = statement.executeQuery("SELECT * FROM t_pending_island_invite WHERE name=\"" + p.getName() + "\";");
                                     ArrayList<String> invitations = new ArrayList<>();
                                     while(result.next()){
-                                        invitations.add(prefix + ChatColor.GOLD + result.getString("island_invitation_sender") + ChatColor.GREEN + " t'as invité à rejoindre son ile (" + ChatColor.GOLD +  result.getString("island_name") + ChatColor.GREEN + "§2)");
+                                        invitations.add(Main.prefix + ChatColor.GOLD + result.getString("island_invitation_sender") + ChatColor.GREEN + " t'as invité à rejoindre son ile (" + ChatColor.GOLD +  result.getString("island_name") + ChatColor.GREEN + "§2)");
                                     }
-                                    p.sendMessage(prefix + ChatColor.BLUE + "Liste de tes invitations :");
-                                    if(invitations.size() == 0) invitations.add(prefix + ChatColor.GREEN + "Vous n'avez aucune invitation");
+                                    p.sendMessage(Main.prefix + ChatColor.BLUE + "Liste de tes invitations :");
+                                    if(invitations.size() == 0) invitations.add(Main.prefix + ChatColor.GREEN + "Vous n'avez aucune invitation");
                                     for(String msg : invitations){
                                         p.sendMessage(msg);
                                     }
@@ -189,7 +194,7 @@ public class oneblock implements CommandExecutor {
                                 return true;
                             }
                         }
-                        p.sendMessage(prefix + ChatColor.RED + "Il te faut une ile pour pouvoir inviter des joueurs ! Commence par faire /is create <nom>");
+                        p.sendMessage(Main.prefix + ChatColor.RED + "Il te faut une ile pour pouvoir inviter des joueurs ! Commence par faire /is create <nom>");
                         return false;
                     }
 
@@ -200,7 +205,7 @@ public class oneblock implements CommandExecutor {
 
                     //return en cas d'auto invitation (s'inviter sois même)
                     if(p.getName().equals(targetName)){
-                        p.sendMessage(prefix + ChatColor.RED + "Tu ne peut pas t auto inviter");
+                        p.sendMessage(Main.prefix + ChatColor.RED + "Tu ne peut pas t auto inviter");
                         return false;
                     }
 
@@ -208,7 +213,7 @@ public class oneblock implements CommandExecutor {
                     try{
                         //on verifie que la cible n'ai pas deja une ile
                         if(MySQL.getPlayerHaveAnIsland(target)){
-                            p.sendMessage(prefix + ChatColor.RED + "Le joueur " + targetName + " a deja une ile !");
+                            p.sendMessage(Main.prefix + ChatColor.RED + "Le joueur " + targetName + " a deja une ile !");
                             return false;
                         }
                         TextComponent accept = new TextComponent(ChatColor.GREEN + "[accepter]    ");
@@ -216,11 +221,11 @@ public class oneblock implements CommandExecutor {
                         accept.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/is join " + p.getName()));
                         TextComponent deny = new TextComponent(ChatColor.RED + "    [refuser]");
                         deny.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder("§4Click ici pour refuser").create()));
-                        target.sendMessage(prefix + ChatColor.GREEN + "Le joueur "+ ChatColor.GOLD + p.getName() + ChatColor.GREEN + " t invite a rejoindre son ile !");
+                        target.sendMessage(Main.prefix + ChatColor.GREEN + "Le joueur "+ ChatColor.GOLD + p.getName() + ChatColor.GREEN + " t invite a rejoindre son ile !");
                         target.spigot().sendMessage(accept,deny);
                     }catch (NullPointerException e){
                         //ici, le joueur n'existe pas
-                        p.sendMessage(prefix + ChatColor.RED + "Le joueur " + targetName + " n existe pas ou est deconnecte");
+                        p.sendMessage(Main.prefix + ChatColor.RED + "Le joueur " + targetName + " n existe pas ou est deconnecte");
                         return false;
                     }
 
@@ -230,9 +235,9 @@ public class oneblock implements CommandExecutor {
                                 INSERT INTO t_pending_island_invite (name, island_name, island_invitation_sender)
                                 VALUES ("%s", "%s", "%s");
                                 """, target.getName(), MySQL.getIslandNameByPlayer(p.getName()), p.getName()));
-                        p.sendMessage(prefix + ChatColor.GREEN + "Le joueur " + target.getName() + " a bien été inviter sur votre ile !");
+                        p.sendMessage(Main.prefix + ChatColor.GREEN + "Le joueur " + target.getName() + " a bien été inviter sur votre ile !");
                     } catch (SQLException e) {
-                        p.sendMessage(prefix + ChatColor.RED + "Une erreur est survenue");
+                        p.sendMessage(Main.prefix + ChatColor.RED + "Une erreur est survenue");
                         return false;
                     }
                 }
@@ -240,12 +245,12 @@ public class oneblock implements CommandExecutor {
                 // CMD : /is kick
                 case "kick" -> {
                     if(args.length == 1){
-                        p.sendMessage(prefix + ChatColor.RED + "Vous ne pouvez pas kick de l air ! /is kick <joueur>");
+                        p.sendMessage(Main.prefix + ChatColor.RED + "Vous ne pouvez pas kick de l air ! /is kick <joueur>");
                         return false;
                     }
                     String target = args[1];
                     if(MySQL.getInformationByNameInt(p.getName(), "t_user", "island_id") != MySQL.getInformationByNameInt(target, "t_user", "island_id")){
-                        p.sendMessage(prefix + ChatColor.RED + "Ce joueur n est pas dans votre ile !");
+                        p.sendMessage(Main.prefix + ChatColor.RED + "Ce joueur n est pas dans votre ile !");
                         return false;
                     }
                     int userPermission = MySQL.getInformationByNameInt(p.getName(), "t_user", "user_island_grade");
@@ -254,13 +259,13 @@ public class oneblock implements CommandExecutor {
                     //regarder si le joueur a la perm de kick
 
                     if(userPermission >= targetPermission){
-                        p.sendMessage(prefix + ChatColor.RED + "Vous ne pouvez pas kick ce joueur de votre ile !");
+                        p.sendMessage(Main.prefix + ChatColor.RED + "Vous ne pouvez pas kick ce joueur de votre ile !");
                         return false;
                     }
 
                     try(Statement statement = Main.INSTANCE.mysql.getConnection().createStatement()){
                         statement.execute("DELETE FROM t_user WHERE name=\"" + target + "\";");
-                        p.sendMessage(prefix + ChatColor.GREEN + " Le joueur " + ChatColor.GOLD + target + ChatColor.GREEN + " a bien ete kick de votre ile !");
+                        p.sendMessage(Main.prefix + ChatColor.GREEN + " Le joueur " + ChatColor.GOLD + target + ChatColor.GREEN + " a bien ete kick de votre ile !");
                     }catch(Exception e){return false;}
                 }
 
@@ -268,12 +273,12 @@ public class oneblock implements CommandExecutor {
                 case "join" -> {
                     //on regarde si le joueur a pas deja une ile (normalement non mais on sais jamais)
                     if(MySQL.getPlayerHaveAnIsland(p)){
-                        p.sendMessage(prefix + ChatColor.RED + "Tu as deja une ile !");
+                        p.sendMessage(Main.prefix + ChatColor.RED + "Tu as deja une ile !");
                         return false;
                     }
 
                     if(args.length == 1){
-                        p.sendMessage(prefix + "§4Mauvaise utilisation /is join <joueur>");
+                        p.sendMessage(Main.prefix + "§4Mauvaise utilisation /is join <joueur>");
                         return false;
                     }
 
@@ -306,29 +311,35 @@ public class oneblock implements CommandExecutor {
                                     VALUES ("%s", %d, %d);
                                     """, p.getName(), islandId, 4));
                             statement.execute("DELETE FROM t_pending_island_invite WHERE name=\"" + p.getName() + "\";");
-                            p.sendMessage(prefix + ChatColor.GREEN + "Tu a bien rejoin l ile " + MySQL.getIslandNameByPlayer(p.getName()) + " !");
+                            p.sendMessage(Main.prefix + ChatColor.GREEN + "Tu a bien rejoin l ile " + MySQL.getIslandNameByPlayer(p.getName()) + " !");
                         }else{
-                            p.sendMessage(prefix + ChatColor.RED + "invitation invalide : " + target);
+                            p.sendMessage(Main.prefix + ChatColor.RED + "invitation invalide : " + target);
                         }
                         return true;
                     }catch (Exception e){return false;}
                 }
 
+                // CMD : /is phase
+
+                case "phase", "phases" -> {
+                    p.openInventory(guis.obPhases(p));
+                }
+
                 // CMD : /is leave
                 case "leave" -> {
                     if(!MySQL.getPlayerHaveAnIsland(p)){
-                        p.sendMessage(prefix + ChatColor.RED + "Vous n'avez pas d'ile !");
+                        p.sendMessage(Main.prefix + ChatColor.RED + "Vous n'avez pas d'ile !");
                         return false;
                     }
 
                     if(MySQL.getPlayerGrade(p.getName()) == 1){
-                        p.sendMessage(prefix + ChatColor.RED + "Vous êtes le chef de votre ile ! Vous devez donc faire la commande /is disband pour supprimer votre ile");
+                        p.sendMessage(Main.prefix + ChatColor.RED + "Vous êtes le chef de votre ile ! Vous devez donc faire la commande /is disband pour supprimer votre ile");
                         return false;
                     }
 
                     try(Statement statement = Main.INSTANCE.mysql.getConnection().createStatement()){
                         statement.execute("DELETE FROM t_user WHERE name=\"" + p.getName() + "\";");
-                        p.sendMessage(prefix + ChatColor.GREEN + "Vous avez bien quitté votre ile !");
+                        p.sendMessage(Main.prefix + ChatColor.GREEN + "Vous avez bien quitté votre ile !");
                     } catch (SQLException e) {
                         throw new RuntimeException(e);
                     }
@@ -337,15 +348,16 @@ public class oneblock implements CommandExecutor {
                 // CMD : /is disband
                 case "disband" -> {
                     if(!MySQL.getPlayerHaveAnIsland(p)){
-                        p.sendMessage(prefix + ChatColor.RED + "Vous n avez pas d ile");
+                        p.sendMessage(Main.prefix + ChatColor.RED + "Vous n'avez pas d ile");
                         return false;
                     }
                     if(MySQL.getPlayerGrade(p.getName()) != 1){
-                        p.sendMessage(prefix + ChatColor.RED + "Vous n avez pas la permission !");
+                        p.sendMessage(Main.prefix + ChatColor.RED + "Vous n'avez pas la permission !");
                         return false;
                     }
-                    p.sendMessage(prefix + ChatColor.RED  + "Veuillez ecrire 'CONFIRMER' dans le chat pour valider la suppréssion de votre ile");
-                    p.sendMessage(prefix + ChatColor.RED + "ATTENTION : cette action supprimera DEFINITIVEMENT votre ile, AUCUNE recuperation possible");
+                    p.sendMessage(Main.prefix + ChatColor.RED  + "Veuillez ecrire 'CONFIRMER' dans le chat pour valider la suppréssion de votre ile");
+                    p.sendMessage(Main.prefix + ChatColor.RED + "ATTENTION : cette action supprimera DEFINITIVEMENT votre ile, AUCUNE recuperation possible");
+                    p.sendMessage(Main.prefix + ChatColor.RED + "Ecrire n'importe quoi d'autre dans le chat annulera la suppression");
                     p.getPersistentDataContainer().set(NamespacedKey.fromString("is-delete"), PersistentDataType.STRING, "");
                     return true;
                 }
@@ -353,16 +365,16 @@ public class oneblock implements CommandExecutor {
                 // CMD : /is visit
                 case "visit", "visite" -> {
                     if(args.length == 1){
-                        p.sendMessage(prefix + ChatColor.RED + "Tu dois spécifier l'ile que tu veut visiter !");
+                        p.sendMessage(Main.prefix + ChatColor.RED + "Tu dois spécifier l'ile que tu veut visiter !");
                         return false;
                     }
                     String target = args[1];
                     boolean canVisit = MySQL.getInformationByNameInt(target, "t_island", "allow_visitors") == 1;
                     if(canVisit){
                         teleportPlayerToIsland(p, target);
-                        p.sendMessage(prefix + ChatColor.GREEN + "Bienvenue sur l ile " + ChatColor.GOLD + target);
+                        p.sendMessage(Main.prefix + ChatColor.GREEN + "Bienvenue sur l'ile " + ChatColor.GOLD + target);
                     }else{
-                        p.sendMessage(prefix + ChatColor.RED + "Cette ile n accepte pas les visiteurs !");
+                        p.sendMessage(Main.prefix + ChatColor.RED + "Cette ile n'accepte pas les visiteurs ou est inexistante !");
                     }
                 }
 
@@ -379,9 +391,9 @@ public class oneblock implements CommandExecutor {
                         } catch (SQLException e) {
                             throw new RuntimeException(e);
                         }
-                        p.sendMessage(prefix + ChatColor.GREEN + "Le warp " + ChatColor.GOLD + args[1] + ChatColor.GREEN + " a bien ete cree");
+                        p.sendMessage(Main.prefix + ChatColor.GREEN + "Le warp " + ChatColor.GOLD + args[1] + ChatColor.GREEN + " a bien été crée");
                     }else{
-                        p.sendMessage(prefix + ChatColor.RED + "Vous devez etre sur votre ile pour pouvoir deposer un is warp !");
+                        p.sendMessage(Main.prefix + ChatColor.RED + "Vous devez être sur votre ile pour pouvoir déposer un is warp !");
                         return false;
                     }
                 }
@@ -395,7 +407,7 @@ public class oneblock implements CommandExecutor {
                     String target = "";
                     int id = MySQL.getInformationByNameInt(args[1], "t_island_warp", "island_id");
                     if(id == 0){
-                        p.sendMessage(prefix + ChatColor.RED + "Warp inconnue !");
+                        p.sendMessage(Main.prefix + ChatColor.RED + "Warp inconnue !");
                         return false;
                     }
                     try(Statement statement = Main.INSTANCE.mysql.getConnection().createStatement()){
@@ -415,36 +427,36 @@ public class oneblock implements CommandExecutor {
                     int pitch = MySQL.getInformationByNameInt(args[1], "t_island_warp", "pitch");
                     Location loc = new Location(Bukkit.getWorld("islands"), x, y, z, yaw, pitch);
                     p.teleport(loc);
-                    p.sendMessage(prefix + ChatColor.GREEN + "Teleportation reussi !");
+                    p.sendMessage(Main.prefix + ChatColor.GREEN + "Teleportation reussi !");
                  }
 
                 //cmd /is promote && /is remote
                 case "promote", "remote" -> {
                     if(args.length == 1 || args.length > 2){
-                        p.sendMessage(prefix + "§4Mauvaise utilisation de la commande : /is" + args[0] + "<player>");
+                        p.sendMessage(Main.prefix + "§4Mauvaise utilisation de la commande : /is" + args[0] + "<player>");
                         return false;
                     }
                     String playerName = args[1];
                     if(!MySQL.getIslandNameByPlayer(playerName).equals(MySQL.getIslandNameByPlayer(p.getName()))){
-                        p.sendMessage(prefix + "§4" + playerName + " n'est pas sur votre ile");
+                        p.sendMessage(Main.prefix + "§4" + playerName + " n'est pas sur votre ile");
                         return false;
                     }
                     if(MySQL.getPlayerGrade(playerName) <= MySQL.getPlayerGrade(p.getName())){
-                        p.sendMessage(prefix + "§4Vous n'avez pas la permission de "+ args[0] + " " + playerName);
+                        p.sendMessage(Main.prefix + "§4Vous n'avez pas la permission de "+ args[0] + " " + playerName);
                         return false;
                     }
                     if(args[0].equals("remote") && MySQL.getPlayerGrade(playerName) == 4){
-                        p.sendMessage(prefix + "§4Ce joueur a deja le grade minimum, par conséquant, vous ne pouvez pas le remote.");
+                        p.sendMessage(Main.prefix + "§4Ce joueur a deja le grade minimum, par conséquant, vous ne pouvez pas le remote.");
                         return false;
                     }
                     if(args[0].equals("promote") && MySQL.getPlayerGrade(p.getName()) == 1 && MySQL.getPlayerGrade(playerName) == 2){
-                        p.sendMessage(prefix + "§4Ce joueur ne peut pas être promote, cependant, si vous voulez qu'il devienne le fondateur de votre ile vous pouvez utiliser la commande /is lead " + playerName);
+                        p.sendMessage(Main.prefix + "§4Ce joueur ne peut pas être promote, cependant, si vous voulez qu'il devienne le fondateur de votre ile vous pouvez utiliser la commande /is lead " + playerName);
                         return false;
                     }
                     int newGrade = MySQL.getPlayerGrade(playerName) + (args[0].equals("promote") ? -1 : 1);
                     try(Statement statement = Main.INSTANCE.mysql.getConnection().createStatement()){
                         statement.execute("UPDATE t_user SET user_island_grade=" + newGrade + " WHERE island_id=" + MySQL.getInformationByNameInt(MySQL.getIslandNameByPlayer(playerName), "t_island", "id") + " AND name='" + playerName + "';");
-                        p.sendMessage(prefix + "§2Le joueur " + playerName + " à bien été " + args[0]);
+                        p.sendMessage(Main.prefix + "§2Le joueur " + playerName + " à bien été " + args[0]);
                     }catch(Exception e){throw new RuntimeException(e);}
                 }
 
@@ -456,13 +468,13 @@ public class oneblock implements CommandExecutor {
                 //cmd /is calculate
                 case "calculate", "calc" -> {
                     if(!MySQL.getPlayerHaveAnIsland(p)){
-                        p.sendMessage(prefix + "§4vous n'avez pas d'ile !");
+                        p.sendMessage(Main.prefix + "§4vous n'avez pas d'ile !");
                         return false;
                     }
                     Location middle = MySQL.getCenterLocationByIslandName(MySQL.getIslandNameByPlayer(p.getName()));
                     int radius = Main.INSTANCE.radiusLevel.get(MySQL.getIslandPrestigeByPlayer(p));
                     AtomicInteger newLevel = new AtomicInteger();
-                    p.sendMessage(prefix + "§2Début du calcul du niveau d'ile...");
+                    p.sendMessage(Main.prefix + "§2Début du calcul du niveau d'ile...");
                     for(int y = -60; y < 320; y++){
                         for(int x = (int) middle.getX()-radius; x < middle.getX()+radius; x++){
                             for(int z = (int) middle.getZ()-radius; z < middle.getZ()+radius; z++){
@@ -480,15 +492,10 @@ public class oneblock implements CommandExecutor {
                         int level = Main.INSTANCE.levelItems.get(mat);
                         newLevel.addAndGet(amount * level);
                     });
-                    p.sendMessage(prefix + "§2Calcul terminée ! Nouveau niveau : §6" + newLevel);
+                    p.sendMessage(Main.prefix + "§2Calcul terminée ! Nouveau niveau : §6" + newLevel);
                     try(Statement statement = Main.INSTANCE.mysql.getConnection().createStatement()){
                         statement.execute("UPDATE t_island SET level=" + newLevel + " WHERE name='" + MySQL.getIslandNameByPlayer(p.getName()) + "';");
                     }catch(Exception e){throw new RuntimeException(e);}
-                }
-
-                //cmd de test pour afficher rapidement des valeurs ou faire en vitesse des tests TJR LAISSER A LA FIN DU SWITCH
-                case "test" -> {
-                    if(!p.isOp()) return false;
                 }
 
                 //PARTIE MODERATEUR
@@ -501,11 +508,17 @@ public class oneblock implements CommandExecutor {
                     try(Statement statement = Main.INSTANCE.mysql.getConnection().createStatement()){
                         statement.execute("INSERT INTO t_holo (x, y, z, type, world) VALUES (" + location.getX() + ", " + p.getLocation().getY() + ", " + location.getZ() +" , \"sb\", \"" + location.getWorld().getName() + "\");");
                     }catch(Exception e){throw new RuntimeException(e);}
-                    p.sendMessage(prefix + "§2Classement mis !");
+                    p.sendMessage(Main.prefix + "§2Classement mis !");
                 }
 
                 default -> {
-                    p.sendMessage(prefix + "§4Commande inconnue");
+                    p.sendMessage(Main.prefix + "§4Commande inconnue");
+                }
+
+                //cmd de test pour afficher rapidement des valeurs ou faire en vitesse des tests
+                case "test" -> {
+                    if(!p.isOp()) return false;
+                    p.openInventory(guis.obPrestige(p));
                 }
             }
         }

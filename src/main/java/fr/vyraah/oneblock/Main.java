@@ -29,6 +29,7 @@ import java.util.*;
 
 public final class Main extends JavaPlugin {
 
+    public static String prefix = net.md_5.bungee.api.ChatColor.of("#fb1010") +"V" + net.md_5.bungee.api.ChatColor.of("#fb3111") + "y" + net.md_5.bungee.api.ChatColor.of("#fc5311") + "r" + net.md_5.bungee.api.ChatColor.of("#fc7412") + "a" + net.md_5.bungee.api.ChatColor.of("#fc9512") + "a" + net.md_5.bungee.api.ChatColor.of("#fdb713") + "h " + net.md_5.bungee.api.ChatColor.of("#fdd813") + "» ";
     public WorldBorderApi worldBorderApi = null;
     public FileConfiguration config = getConfig();
     public static Main INSTANCE;

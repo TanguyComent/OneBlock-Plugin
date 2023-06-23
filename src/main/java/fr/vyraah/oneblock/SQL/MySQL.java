@@ -78,6 +78,7 @@ public class MySQL {
         int x = 0;
         int z = 0;
         while(true){
+            if(x >= Main.INSTANCE.config.getInt("next_island_x") && z >= Main.INSTANCE.config.getInt("next_island_z")) return "ERROR";
             Location testLoc = new Location(Bukkit.getWorld("islands"), x, 0, z);
             if(new Location(Bukkit.getWorld("islands"), loc.getX(), 0, loc.getZ()).distance(testLoc) <= 300) break;
             if( x == z ){ x += 3000; } else { z += 3000; }
@@ -88,7 +89,7 @@ public class MySQL {
                 return result.getString("name");
             }
         }catch(Exception e){}
-        return "";
+        return "ERROR";
     }
 
     public static int getPlayerGrade(String playerName){
@@ -229,6 +230,17 @@ public class MySQL {
         return times;
     }
 
+    public static String getObPhase(String islandName){
+        String obPhase = "";
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            ResultSet result = statement.executeQuery("SELECT active_phase AS ap FROM t_island WHERE name='" + islandName + "';");
+            while(result.next()){
+                obPhase = result.getString("ap");
+            }
+        }catch(Exception e){}
+        return obPhase;
+    }
+
     // =========================================================================================
     //                             CONNECTION & DECONNEXION DE LA DB
     // =========================================================================================
@@ -242,7 +254,7 @@ public class MySQL {
             try{statement.execute("ALTER TABLE t_island ADD prestige_level INT NOT NULL DEFAULT 1;");}catch(Exception e){}
             try{statement.execute("ALTER TABLE t_island ADD level FLOAT NOT NULL DEFAULT 0;");}catch(Exception e){}
             try{statement.execute("ALTER TABLE t_island ADD ob_time_break INT NOT NULL DEFAULT 0;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD active_phase VARCHAR(100) NOT NULL DEFAULT 0;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD active_phase VARCHAR(100) NOT NULL DEFAULT \"Plaine\";");}catch(Exception e){}
             try{statement.execute("ALTER TABLE t_island ADD center_x INT NOT NULL;");}catch(Exception e){}
             try{statement.execute("ALTER TABLE t_island ADD center_y INT NOT NULL;");}catch(Exception e){}
             try{statement.execute("ALTER TABLE t_island ADD center_z INT NOT NULL;");}catch(Exception e){}

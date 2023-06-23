@@ -91,6 +91,7 @@ public class Wells implements Listener {
         if(!MySQL.isLocationIsInPlayerIsland(p, p.getLocation())) return;
         if(action == Action.LEFT_CLICK_BLOCK){
             RayTraceResult rayResult = p.rayTraceBlocks(1000);
+            if(rayResult == null) return;
             Block bl = rayResult.getHitBlock();
             if (!Main.INSTANCE.wells.containsKey(bl.getType())) return;
             try (Statement statement = Main.INSTANCE.mysql.getConnection().createStatement()) {

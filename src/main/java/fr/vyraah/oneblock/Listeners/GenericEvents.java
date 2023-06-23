@@ -36,7 +36,7 @@ public class GenericEvents implements Listener {
         if(p.getPersistentDataContainer().has(NamespacedKey.fromString("is-delete"), PersistentDataType.STRING)){
             if(e.getMessage().equals("CONFIRMER")){
                 e.setCancelled(true);
-                p.sendMessage("§2Votre ile a bien été supprimée !");
+                p.sendMessage(Main.prefix + "§2Votre ile a bien été supprimée !");
                 //Tp des joueurs present sur l'is au spawn
                 for(Player players : Bukkit.getOnlinePlayers()){
                     if(players.getLocation().getWorld().equals(Bukkit.getWorld("islands"))){
@@ -53,7 +53,7 @@ public class GenericEvents implements Listener {
                     statement.execute(String.format("DELETE FROM t_user WHERE island_id=%d;", islandId));
                 }catch(Exception exception){}
             }else{
-                p.sendMessage("§4Suppression de l'ile annulée");
+                p.sendMessage(Main.prefix + "§2Suppression de l'ile annulée");
             }
             p.getPersistentDataContainer().remove(NamespacedKey.fromString("is-delete"));
         }

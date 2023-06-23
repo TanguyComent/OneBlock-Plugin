@@ -1,5 +1,6 @@
 package fr.vyraah.oneblock.Listeners;
 
+import fr.vyraah.oneblock.Main;
 import fr.vyraah.oneblock.SQL.MySQL;
 import fr.vyraah.oneblock.guis.guis;
 import org.bukkit.ChatColor;
@@ -12,6 +13,9 @@ import org.bukkit.event.inventory.InventoryInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.sql.SQLClientInfoException;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 
 public class GuisEvents implements Listener {
@@ -24,6 +28,7 @@ public class GuisEvents implements Listener {
             inventoryNames.add(ChatColor.RED + "" + ChatColor.BOLD + MySQL.getIslandNameByPlayer(p.getName()));
             inventoryNames.add(ChatColor.RED + "" + ChatColor.BOLD + "Menu des warps");
             inventoryNames.add("§4Menu de modération");
+            inventoryNames.add("§6§lPhases");
             if(inventoryNames.contains(e.getView().getTitle())){
                 e.setCancelled(true);
                 if(e.getCurrentItem() != null){
@@ -58,6 +63,13 @@ public class GuisEvents implements Listener {
                             case "inviteplayer" -> {
                                 String playerName = e.getCurrentItem().getItemMeta().getPersistentDataContainer().get(NamespacedKey.fromString("playername"), PersistentDataType.STRING);
                                 p.performCommand("is invite " + playerName);
+                            }
+                            case "selectphase" -> {
+                                String newPhase = e.getCurrentItem().getItemMeta().getDisplayName().replace("§", "").replace("2", "");
+                                try(Statement statement = Main.INSTANCE.mysql.getConnection().createStatement()){
+                                    statement.execute("UPDATE t_island SET active_phase='" + newPhase + "' WHERE name='" + MySQL.getIslandNameByPlayer(p.getName()) + "';");
+                                }catch(Exception ex){throw new RuntimeException(ex);}
+                                p.sendMessage("§2Vous avez bien sélectionner la phase §e" + newPhase + " §2!");
                             }
                             default -> {}
                         }

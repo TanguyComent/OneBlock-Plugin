@@ -2,7 +2,7 @@ name: OneBlock-Vyraah
 version: '${version}'
 main: fr.vyraah.oneblock.Main
 api-version: 1.18
-authors: [ Cocci ]
+authors: [ Kitsoko ]
 commands:
   is:
   ob:

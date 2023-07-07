@@ -1,25 +1,42 @@
 package fr.vyraah.oneblock.commands;
 
+import com.earth2me.essentials.api.Economy;
+import com.earth2me.essentials.api.NoLoanPermittedException;
+import com.earth2me.essentials.api.UserDoesNotExistException;
 import fr.vyraah.oneblock.Main;
 import fr.vyraah.oneblock.SQL.MySQL;
+import fr.vyraah.oneblock.cinématics.Cinematics;
 import fr.vyraah.oneblock.guis.guis;
+import net.ess3.api.MaxMoneyException;
 import net.md_5.bungee.api.chat.*;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.craftbukkit.v1_18_R2.CraftServer;
+import org.bukkit.craftbukkit.v1_18_R2.CraftWorld;
+import org.bukkit.craftbukkit.v1_18_R2.entity.CraftItem;
+import org.bukkit.craftbukkit.v1_18_R2.entity.CraftPlayer;
 import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
+import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.sql.Statement;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class oneblock implements CommandExecutor {
@@ -33,6 +50,8 @@ public class oneblock implements CommandExecutor {
         // IL FAITL A CREATION DE L'ILE AVEC LA CREATION DES VALEURS DANS LA DB :)
 
         if(sender instanceof Player p) {
+            if(MySQL.getPlayerHaveAnIsland(p))
+                MySQL.updateQuest(MySQL.getIslandNameByPlayer(p.getName()));
 
             if(args.length == 0){
                 if(MySQL.getPlayerHaveAnIsland(p)){
@@ -44,11 +63,11 @@ public class oneblock implements CommandExecutor {
                     return true;
                 }
             }
-            if(MySQL.getPlayerHaveAnIsland(p) && !args[0].equalsIgnoreCase("create")){
+            if(!MySQL.getPlayerHaveAnIsland(p) && !args[0].equalsIgnoreCase("create") && !args[0].equalsIgnoreCase("invite") && !args[0].equalsIgnoreCase("join")){
                 p.sendMessage(Main.prefix + "§4Vous devez avoir une ile pour effectuer cette action !\n" + Main.prefix + "§4Créez une ile grace a la commande /is create <nom>");
                 return false;
             }
-            switch (args[0]) {
+            switch(args[0].toLowerCase()){
 
                 //CMD : /is help
                 case "help" -> {
@@ -101,6 +120,9 @@ public class oneblock implements CommandExecutor {
                                 INSERT INTO t_island (name, center_x, center_z, center_y, oneblock_x, oneblock_z, oneblock_y, spawn_x, spawn_z, spawn_y)
                                 VALUES ("%s", %d, %d, 0, %d, %d, 0, %d, %d, 0);
                                 """, islandName, x, z, x, z, x, z));
+                        int day = LocalDateTime.now().getDayOfMonth();
+                        int month = LocalDateTime.now().getMonthValue();
+                        statement.execute(String.format("INSERT INTO t_island_daily_quest (island_name, day, month) VALUES ('%s', %d, %d);", islandName, day, month));
 
                         //relation joueur / is
                         int islandId = MySQL.getInformationByNameInt(islandName,"t_island" , "id");
@@ -134,9 +156,6 @@ public class oneblock implements CommandExecutor {
 
                 // CMD : /is go
                 case "go", "teleport" -> {
-                    if(!MySQL.getPlayerHaveAnIsland(p)){
-                        p.sendMessage(Main.prefix + ChatColor.RED + "Tu n as pas d ile !");
-                    }
                     teleportPlayerToIsland(p, MySQL.getIslandNameByPlayer(p.getName()));
                     return true;
                 }
@@ -245,7 +264,7 @@ public class oneblock implements CommandExecutor {
                 // CMD : /is kick
                 case "kick" -> {
                     if(args.length == 1){
-                        p.sendMessage(Main.prefix + ChatColor.RED + "Vous ne pouvez pas kick de l air ! /is kick <joueur>");
+                        p.sendMessage(Main.prefix + ChatColor.RED + "Vous ne pouvez pas kick de l'air ! /is kick <joueur>");
                         return false;
                     }
                     String target = args[1];
@@ -327,11 +346,6 @@ public class oneblock implements CommandExecutor {
 
                 // CMD : /is leave
                 case "leave" -> {
-                    if(!MySQL.getPlayerHaveAnIsland(p)){
-                        p.sendMessage(Main.prefix + ChatColor.RED + "Vous n'avez pas d'ile !");
-                        return false;
-                    }
-
                     if(MySQL.getPlayerGrade(p.getName()) == 1){
                         p.sendMessage(Main.prefix + ChatColor.RED + "Vous êtes le chef de votre ile ! Vous devez donc faire la commande /is disband pour supprimer votre ile");
                         return false;
@@ -347,10 +361,6 @@ public class oneblock implements CommandExecutor {
 
                 // CMD : /is disband
                 case "disband" -> {
-                    if(!MySQL.getPlayerHaveAnIsland(p)){
-                        p.sendMessage(Main.prefix + ChatColor.RED + "Vous n'avez pas d ile");
-                        return false;
-                    }
                     if(MySQL.getPlayerGrade(p.getName()) != 1){
                         p.sendMessage(Main.prefix + ChatColor.RED + "Vous n'avez pas la permission !");
                         return false;
@@ -467,10 +477,6 @@ public class oneblock implements CommandExecutor {
 
                 //cmd /is calculate
                 case "calculate", "calc" -> {
-                    if(!MySQL.getPlayerHaveAnIsland(p)){
-                        p.sendMessage(Main.prefix + "§4vous n'avez pas d'ile !");
-                        return false;
-                    }
                     Location middle = MySQL.getCenterLocationByIslandName(MySQL.getIslandNameByPlayer(p.getName()));
                     int radius = Main.INSTANCE.radiusLevel.get(MySQL.getIslandPrestigeByPlayer(p));
                     AtomicInteger newLevel = new AtomicInteger();
@@ -498,6 +504,77 @@ public class oneblock implements CommandExecutor {
                     }catch(Exception e){throw new RuntimeException(e);}
                 }
 
+                case "prestige" -> {
+                    p.openInventory(guis.obPrestige(p));
+                }
+
+                case "createshop" -> {
+                    if(Main.isFull(p)){
+                        p.sendMessage(Main.prefix + "Votre inventaire est plein ! Veuillez y laisser au moin 1 place et réessayer");
+                        return false;
+                    }
+                    p.openInventory(guis.sellOrBuyChoice());
+                }
+
+                case "bank" -> {
+                    int bankSold = MySQL.getObBankMoney(MySQL.getIslandNameByPlayer(p.getName()));
+                    if(args.length == 1){
+                        p.sendMessage(Main.prefix + "§2Vous avez §e" + bankSold + "$ §2dans votre bank d'ile");
+                        return true;
+                    }
+                    if(args.length > 3){
+                        p.sendMessage(Main.prefix + "§4Commande inconnue");
+                        return false;
+                    }
+                    if(args[1].equalsIgnoreCase("deposit") || args[1].equalsIgnoreCase("withdraw")){
+                        if(args.length == 2) {
+                            p.sendMessage(Main.prefix + "§4Mauvaise utilisation : /is bank " + args[1] + " <nombre entier>");
+                            return false;
+                        }
+                        long value;
+                        try{
+                            value = Integer.valueOf(args[2]);
+                        }catch(NumberFormatException e){
+                            p.sendMessage(Main.prefix + "§4Mauvaise utilisation : /is bank " + args[1] + " <nombre entier>");
+                            return false;
+                        }
+
+                        if(args[1].equalsIgnoreCase("deposit")){
+                            try {
+                                if(Economy.hasEnough(p.getName(), value)){
+                                    Economy.substract(p.getName(), BigDecimal.valueOf(value));
+                                    MySQL.alterBankSold(MySQL.getIslandNameByPlayer(p.getName()), value, 1);
+                                    p.sendMessage(Main.prefix + "§2Vous avez bien déposer §e" + value + "$ §2dans votre bank d'ile\n"
+                                            + Main.prefix + "§2Nouveau solde de la bank : §e" + MySQL.getObBankMoney(MySQL.getIslandNameByPlayer(p.getName())) + "$");
+                                }else{
+                                    p.sendMessage(Main.prefix + "§4Vous n'avez pas asser d'argent pour effectuer cela !");
+                                }
+                            } catch (UserDoesNotExistException | MaxMoneyException | NoLoanPermittedException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }else if(args[1].equalsIgnoreCase("withdraw")) {
+                            if(MySQL.alterBankSold(MySQL.getIslandNameByPlayer(p.getName()), value, -1)){
+                                try {
+                                    Economy.add(p.getName(), BigDecimal.valueOf(value));
+                                } catch (UserDoesNotExistException | NoLoanPermittedException | MaxMoneyException e) {
+                                    throw new RuntimeException(e);
+                                }
+                                p.sendMessage(Main.prefix + "§2Vous avez bien retiré §e" + value + "$ §2de votre bank");
+                            }else{
+                                p.sendMessage(Main.prefix + "§4Vous n'avez pas asser d'argent dans votre bank pour effectuer cela !");
+                            }
+                        }
+                    }else{
+                        p.sendMessage(Main.prefix + "§4Commande inconnue");
+                    }
+                }
+
+                case "quest" -> {
+                    p.openInventory(guis.dailyQuestInv(p));
+                }
+
+                default -> p.sendMessage(Main.prefix + "§4Commande inconnue");
+
                 //PARTIE MODERATEUR
 
                 //cmd /is setholotop
@@ -511,14 +588,26 @@ public class oneblock implements CommandExecutor {
                     p.sendMessage(Main.prefix + "§2Classement mis !");
                 }
 
-                default -> {
-                    p.sendMessage(Main.prefix + "§4Commande inconnue");
+                case "sqlorder" -> {
+                    if(!p.isOp()) return false;
+                    int i = 1;
+                    String order = "";
+                    while(i < args.length) {
+                        order += args[i] + " ";
+                        i++;
+                    }
+                    p.sendMessage("§2Order : §e" + order + "§2has been queried");
+                    try(Statement statement = Main.INSTANCE.mysql.getConnection().createStatement()){
+                        statement.execute(order);
+                    }catch(Exception e){
+                        p.sendMessage("§4[SQL ERROR] : " + e.getMessage());
+                    }
                 }
 
                 //cmd de test pour afficher rapidement des valeurs ou faire en vitesse des tests
                 case "test" -> {
                     if(!p.isOp()) return false;
-                    p.openInventory(guis.obPrestige(p));
+                    Cinematics.createIslandNarration(p);
                 }
             }
         }

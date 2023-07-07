@@ -1,10 +1,8 @@
 package fr.vyraah.oneblock.managers;
 
-import fr.vyraah.oneblock.Listeners.GenericEvents;
-import fr.vyraah.oneblock.Listeners.OneblockEvent;
-import fr.vyraah.oneblock.Listeners.Wells;
+import fr.vyraah.oneblock.Listeners.*;
 import fr.vyraah.oneblock.Main;
-import fr.vyraah.oneblock.Listeners.GuisEvents;
+import fr.vyraah.oneblock.Listeners.IslanShopEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.PluginManager;
 
@@ -23,5 +21,7 @@ public class EventManager {
         pm.registerEvents(new GenericEvents(), plugin);
         pm.registerEvents(new Wells(), plugin);
         pm.registerEvents(new OneblockEvent(), plugin);
+        pm.registerEvents(new QuestEvent(), plugin);
+        pm.registerEvents(new IslanShopEvent(), plugin);
     }
 }

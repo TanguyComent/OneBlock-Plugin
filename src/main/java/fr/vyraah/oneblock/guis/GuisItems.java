@@ -8,8 +8,6 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.ArrayList;
-
 public class GuisItems {
 
     public static ItemStack islandInfoItem(Player p){
@@ -25,6 +23,12 @@ public class GuisItems {
 
     public static ItemStack orangeGlass(){
         ItemBuilder it = new ItemBuilder(Material.ORANGE_STAINED_GLASS_PANE);
+        it.setName(" ");
+        return it.toItemStack();
+    }
+
+    public static ItemStack whiteGlass(){
+        ItemBuilder it = new ItemBuilder(Material.WHITE_STAINED_GLASS_PANE);
         it.setName(" ");
         return it.toItemStack();
     }
@@ -144,38 +148,5 @@ public class GuisItems {
         return it.toItemStack();
     }
 
-    public static ItemStack phaseBuilder(Player p, Material phaseMat, int blockRequired, String name){
-        ItemBuilder it;
-        if(MySQL.getObTimesBreak(MySQL.getIslandNameByPlayer(p.getName())) >= blockRequired) {
-            it = new ItemBuilder(phaseMat);
-            it.setName(name);
-            it.setLore("§eClick pour sélectionner");
-            it.addStringComponent("actions", "selectphase");
-        }else{
-            it = new ItemBuilder(Material.BARRIER);
-            it.setName("§4Lock");
-            ArrayList<String> lore = new ArrayList<>();
-            lore.add("§4Biome débloquer au §e" + blockRequired + " §4blocs cassés !");
-            lore.add("§4Vous devez encore casser §e" + (blockRequired - MySQL.getObTimesBreak(MySQL.getIslandNameByPlayer(p.getName()))) + " §4fois votre");
-            lore.add("§4oneblock pour débloquer cette phase !");
-            it.setLoreList(lore);
-        }
-        return it.toItemStack();
-    }
-
-    public static ItemStack prestigeBuilder(Player p, int prestige){
-        ItemBuilder it = switch(prestige){
-            default -> new ItemBuilder(Material.COAL_BLOCK);
-            case 2 -> new ItemBuilder(Material.IRON_BLOCK);
-            case 3 -> new ItemBuilder(Material.GOLD_BLOCK);
-            case 4 -> new ItemBuilder(Material.DIAMOND_BLOCK);
-            case 5 -> new ItemBuilder(Material.NETHERITE_BLOCK);
-        };
-        it.addIntComponent("prestige", prestige);
-        it.setName("§ePrestige " + prestige);
-        boolean prestigeUnlocked = MySQL.getIslandPrestigeByPlayer(p) >= prestige;
-        it.setLore((prestigeUnlocked) ? "§2Click pour sélectionner" : "§4Vous n'avez pas débloquer ce prestige", "§4Click pour le débloquer !");
-        return it.toItemStack();
-    }
 
 }

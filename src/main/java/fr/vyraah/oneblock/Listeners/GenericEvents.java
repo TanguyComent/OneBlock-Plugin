@@ -2,7 +2,10 @@ package fr.vyraah.oneblock.Listeners;
 
 import fr.vyraah.oneblock.Main;
 import fr.vyraah.oneblock.SQL.MySQL;
+import fr.vyraah.oneblock.commons.ItemBuilder;
+import joptsimple.ValueConversionException;
 import org.bukkit.*;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.EntityType;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.player.*;
@@ -10,11 +13,16 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.inventory.ItemFlag;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.UUID;
 
 public class GenericEvents implements Listener {
 
@@ -56,6 +64,40 @@ public class GenericEvents implements Listener {
                 p.sendMessage(Main.prefix + "§2Suppression de l'ile annulée");
             }
             p.getPersistentDataContainer().remove(NamespacedKey.fromString("is-delete"));
+        }
+    }
+
+    @EventHandler
+    public void shopCreationChat(PlayerChatEvent e){
+        Player p = e.getPlayer();
+        if(!p.getPersistentDataContainer().has(NamespacedKey.fromString("shop-price"), PersistentDataType.STRING)) return;
+        e.setCancelled(true);
+        if(e.getMessage().replace(" ", "").equalsIgnoreCase("cancel")){
+            p.sendMessage(Main.prefix + "§2La création de shop a bien été annulée");
+            p.getPersistentDataContainer().remove(NamespacedKey.fromString("shop-price"));
+            return;
+        }
+        if(Main.isFull(p)){
+            p.sendMessage(Main.prefix + "Votre inventaire est plein ! Veuillez y laisser au moin 1 place et retaper le prix");
+            return;
+        }
+        try{
+            int price = Integer.parseInt(e.getMessage());
+            ArrayList<Object> shopInfo = GuisEvents.shopInCreation.get(p.getUniqueId());
+            String buyOrSell = ((int) shopInfo.get(0) == 1) ? "buy" : "sell";
+            ItemStack toSell = (ItemStack) shopInfo.get(1);
+            ItemBuilder sellChest = new ItemBuilder(Material.CHEST);
+            sellChest.setName("§6§lSell chest");
+            sellChest.setLore("§eItem : (X" + toSell.getAmount() + ") " + toSell.getType().toString().toLowerCase(), "§eType : " + buyOrSell, "§ePrice : " + price);
+            sellChest.addStringComponent("sellshop", "");
+            sellChest.addIntComponent("buyorsell", (int) shopInfo.get(0));
+            sellChest.addIntComponent("price", price);
+            sellChest.addStringComponent("item", Main.serializedItem(toSell));
+            p.getPersistentDataContainer().remove(NamespacedKey.fromString("shop-price"));
+            p.sendMessage(Main.prefix + "§2Création de shop terminée");
+            p.getInventory().addItem(sellChest.toItemStack());
+        }catch(Exception ex){
+            p.sendMessage(Main.prefix + "§4La valeur que vous avez entrer ne correspond pas ! Si vous souhaitez annuler la création du shop, veuillez écrir 'annuler' dans le cahat");
         }
     }
 }

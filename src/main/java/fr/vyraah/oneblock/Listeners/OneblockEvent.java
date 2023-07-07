@@ -43,8 +43,15 @@ public class OneblockEvent implements Listener {
         Location obLocation = MySQL.getObLocationByIslandName(MySQL.getIslandNameByPlayer(p.getName()));
         if(bl.getLocation().distance(obLocation) == 0){
             e.setCancelled(true);
+            String islandName = MySQL.getIslandNameByPlayer(p.getName());
+            if(MySQL.hasQuestX(islandName, 1) && !MySQL.isQuestCompleted(islandName)){
+                MySQL.incrementQuest(islandName, 1);
+                if(MySQL.getDailyQuestNumber(islandName) == 3000){
+                    MySQL.completeQuest(islandName);
+                    p.sendMessage(Main.prefix + "§2Vous avez complété votre quête d'ile journalière ! §e/is quest §2pour récupérer votre récompense !");
+                }
+            }
             try(Statement statement = Main.INSTANCE.mysql.getConnection().createStatement()){
-                String islandName = MySQL.getIslandNameByPlayer(p.getName());
                 int newTimeBreak = MySQL.getObTimesBreak(islandName) + 1;
                 statement.execute("UPDATE t_island SET ob_time_break=" + newTimeBreak + " WHERE name='" + islandName + "';");
             }catch(Exception ex){throw new RuntimeException(ex);}
@@ -70,22 +77,88 @@ public class OneblockEvent implements Listener {
             int luck = r.nextInt(10) + 1;
             if(luck <= 7) {
                 luck = r.nextInt(100) + 1;
-                if (MySQL.getIslandPrestigeByPlayer(p) == 1) {
+                int activePrestige = MySQL.getActivePrestige(MySQL.getIslandNameByPlayer(p.getName()));
+                if(activePrestige == 1) {
                     if(luck <= 15) {
                         obLocation.getBlock().setType(Material.CHEST);
                         Chest chest = (Chest) obLocation.getBlock().getState();
                         Inventory chestInv = chest.getInventory();
-                    }else if(luck <= 55) {
-                        obLocation.getBlock().setType(Material.STONE);
-                    }else if(luck <= 75) {
-                        obLocation.getBlock().setType(Material.OAK_LOG);
-                    }else if(luck <= 85) {
-                        obLocation.getBlock().setType(Material.IRON_ORE);
-                    }else if(luck <= 90) {
-                        obLocation.getBlock().setType(Material.GOLD_ORE);
-                    }else {
-                        obLocation.getBlock().setType(Material.COAL_ORE);
                     }
+                    else if(luck <= 55) obLocation.getBlock().setType(Material.STONE);
+
+                    else if(luck <= 75) obLocation.getBlock().setType(Material.COPPER_ORE);
+
+                    else if(luck <= 85) obLocation.getBlock().setType(Material.IRON_ORE);
+
+                    else obLocation.getBlock().setType(Material.COAL_ORE);
+
+                }else if(activePrestige == 2){
+                    if(luck <= 10){
+                        obLocation.getBlock().setType(Material.CHEST);
+                        Chest chest = (Chest) obLocation.getBlock().getState();
+                        Inventory chestInv = chest.getInventory();
+                    }
+                    else if(luck <= 50) obLocation.getBlock().setType(Material.STONE);
+
+                    else if(luck <= 70) obLocation.getBlock().setType(Material.COPPER_ORE);
+
+                    else if(luck <= 80) obLocation.getBlock().setType(Material.IRON_ORE);
+
+                    else obLocation.getBlock().setType(Material.REDSTONE_ORE);
+
+                }else if(activePrestige == 3){
+                    if(luck <= 10){
+                        obLocation.getBlock().setType(Material.CHEST);
+                        Chest chest = (Chest) obLocation.getBlock().getState();
+                        Inventory chestInv = chest.getInventory();
+                    }
+                    else if(luck <= 40) obLocation.getBlock().setType(Material.STONE);
+
+                    else if(luck <= 60) obLocation.getBlock().setType(Material.COPPER_ORE);
+
+                    else if(luck <= 70) obLocation.getBlock().setType(Material.IRON_ORE);
+
+                    else if(luck <= 90) obLocation.getBlock().setType(Material.REDSTONE_ORE);
+
+                    else obLocation.getBlock().setType(Material.LAPIS_ORE);
+
+                }else if(activePrestige == 4){
+                    if(luck <= 10){
+                        obLocation.getBlock().setType(Material.CHEST);
+                        Chest chest = (Chest) obLocation.getBlock().getState();
+                        Inventory chestInv = chest.getInventory();
+                    }
+                    else if(luck <= 30) obLocation.getBlock().setType(Material.STONE);
+
+                    else if(luck <= 50) obLocation.getBlock().setType(Material.COPPER_ORE);
+
+                    else if(luck <= 60) obLocation.getBlock().setType(Material.IRON_ORE);
+
+                    else if(luck <= 80) obLocation.getBlock().setType(Material.REDSTONE_ORE);
+
+                    else if(luck <= 95) obLocation.getBlock().setType(Material.LAPIS_ORE);
+
+                    else obLocation.getBlock().setType(Material.DIAMOND_ORE);
+
+                }else if(activePrestige == 5){
+                    if(luck <= 10){
+                        obLocation.getBlock().setType(Material.CHEST);
+                        Chest chest = (Chest) obLocation.getBlock().getState();
+                        Inventory chestInv = chest.getInventory();
+                    }
+                    else if(luck <= 20) obLocation.getBlock().setType(Material.STONE);
+
+                    else if(luck <= 40) obLocation.getBlock().setType(Material.COPPER_ORE);
+
+                    else if(luck <= 50) obLocation.getBlock().setType(Material.IRON_ORE);
+
+                    else if(luck <= 70) obLocation.getBlock().setType(Material.REDSTONE_ORE);
+
+                    else if(luck <= 85) obLocation.getBlock().setType(Material.LAPIS_ORE);
+
+                    else if(luck <= 95) obLocation.getBlock().setType(Material.DIAMOND_ORE);
+
+                    else obLocation.getBlock().setType(Material.EMERALD_ORE);
                 }
             }else{
                 luck = r.nextInt(100) + 1;

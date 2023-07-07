@@ -1,4 +1,4 @@
-package PlaceHolder;
+package fr.vyraah.oneblock.PlaceHolder;
 
 import fr.vyraah.oneblock.SQL.MySQL;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;

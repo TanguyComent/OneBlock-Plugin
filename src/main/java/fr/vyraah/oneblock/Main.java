@@ -1,8 +1,9 @@
 package fr.vyraah.oneblock;
 
-import PlaceHolder.IslandLvl;
-import PlaceHolder.IslandName;
+import com.earth2me.essentials.api.Economy;
 import com.github.yannicklamprecht.worldborder.api.WorldBorderApi;
+import fr.vyraah.oneblock.PlaceHolder.IslandLvl;
+import fr.vyraah.oneblock.PlaceHolder.IslandName;
 import fr.vyraah.oneblock.SQL.MySQL;
 import fr.vyraah.oneblock.commands.oneblock;
 import fr.vyraah.oneblock.commons.FileC;
@@ -12,19 +13,25 @@ import me.arcaniax.hdb.api.HeadDatabaseAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.configuration.serialization.ConfigurationSerializable;
+import org.bukkit.configuration.serialization.ConfigurationSerialization;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.io.BukkitObjectInputStream;
+import org.bukkit.util.io.BukkitObjectOutputStream;
 import org.jetbrains.annotations.NotNull;
 import org.yaml.snakeyaml.Yaml;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.*;
 
 public final class Main extends JavaPlugin {
@@ -41,10 +48,11 @@ public final class Main extends JavaPlugin {
     public HashMap<Integer, Integer> radiusLevel = new HashMap<>();
     public HashMap<Material, Integer> wells = new HashMap<>();
     public ArrayList<Location> scoreboardLocation = new ArrayList<>();
+    public static boolean locked = false;
 
     @Override
     public void onEnable() {
-
+        if(locked) return;
         // world border api implementation
 
         boolean canStart = true;
@@ -66,6 +74,14 @@ public final class Main extends JavaPlugin {
             Bukkit.getLogger().info("Ce plugin ne peut pas marcher tout seul :");
             Bukkit.getLogger().info("Veuillez ajouter le plugin Multiverse-Core a votre server");
             Bukkit.getLogger().info("lien : https://www.spigotmc.org/resources/multiverse-core.390/");
+            Bukkit.getLogger().info("==================================================================================");
+            canStart = false;
+        }
+
+        if(getServer().getPluginManager().getPlugin("Essentials") == null){
+            Bukkit.getLogger().info("==================================================================================");
+            Bukkit.getLogger().info("Ce plugin ne peut pas marcher tout seul :");
+            Bukkit.getLogger().info("Veuillez ajouter le plugin Essentials a votre server");
             Bukkit.getLogger().info("==================================================================================");
             canStart = false;
         }
@@ -94,6 +110,12 @@ public final class Main extends JavaPlugin {
             Bukkit.getWorld("islands").getDifficulty();
         }catch (NullPointerException e){
             getServer().dispatchCommand(getServer().getConsoleSender(), "mv create islands NORMAL -g VoidGen -t FLAT");
+        }
+
+        try{
+            Bukkit.getWorld("history").getDifficulty();
+        }catch (NullPointerException e){
+            getServer().dispatchCommand(getServer().getConsoleSender(), "mv create history NORMAL -g VoidGen -t FLAT");
         }
 
         //--------------------------------------------------------------------------------
@@ -125,7 +147,7 @@ public final class Main extends JavaPlugin {
 
         //--------------------------------------------------------------------------------
 
-        Bukkit.getLogger().info("=================================");
+        Bukkit.getLogger().info("===========================");
         Bukkit.getLogger().info("Loading VyraahOneBlock...");
         Bukkit.getLogger().info(" ");
         Bukkit.getLogger().info("===========================");
@@ -205,11 +227,39 @@ public final class Main extends JavaPlugin {
     @Override
     public void onDisable(){
 
-        Bukkit.getLogger().info("=================================");
+        Bukkit.getLogger().info("===========================");
         Bukkit.getLogger().info("Unloading VyraahOneBlock...");
         Bukkit.getLogger().info(" ");
         Bukkit.getLogger().info("===========================");
 
         mysql.disconnect();
     }
+
+    public static String serializedItem(ItemStack it) throws IOException {
+        ByteArrayOutputStream io = new ByteArrayOutputStream();
+        BukkitObjectOutputStream os = new BukkitObjectOutputStream(io);
+        os.writeObject(it);
+        os.flush();
+
+        byte[] serializedObject = io.toByteArray();
+
+        return Base64.getEncoder().encodeToString(serializedObject);
+    }
+
+    public static ItemStack deserializedItem(String string) throws IOException, ClassNotFoundException {
+        byte[] serializedObject = Base64.getDecoder().decode(string);
+
+        ByteArrayInputStream is = new ByteArrayInputStream(serializedObject);
+        BukkitObjectInputStream in = new BukkitObjectInputStream(is);
+
+        return (ItemStack) in.readObject();
+    }
+
+    public static boolean isFull(Player p){
+        for(int i = 0; i<=35; i++){
+            if(p.getInventory().getItem(i) == null) return false;
+        }
+        return true;
+    }
+
 }

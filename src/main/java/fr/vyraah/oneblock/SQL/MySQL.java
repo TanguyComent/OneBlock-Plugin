@@ -1,20 +1,26 @@
 package fr.vyraah.oneblock.SQL;
 
+import fr.vyraah.oneblock.IslandShop.ShopType;
 import fr.vyraah.oneblock.Main;
+import fr.vyraah.oneblock.commons.FloatingItemsNMS;
+import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.block.BlockFace;
+import org.bukkit.craftbukkit.v1_18_R2.entity.CraftPlayer;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 import java.sql.*;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Random;
 
 public class MySQL {
     private Connection conn;
-
-
-    // =========================================================================================
-    //                             GET INFORMATION PLAYER ISLAND
-    // =========================================================================================
 
     public static boolean getPlayerHaveAnIsland(Player p){
         try{
@@ -50,7 +56,7 @@ public class MySQL {
         int i = 0;
         try{
             Statement statement = Main.INSTANCE.mysql.getConnection().createStatement();
-            ResultSet result = statement.executeQuery("SELECT * FROM " + table + " WHERE name=\"" + name + "\";");
+            ResultSet result = statement.executeQuery("SELECT " + information + " FROM " + table + " WHERE name=\"" + name + "\";");
             while(result.next()){
                 i = result.getInt(information);
             }
@@ -90,6 +96,16 @@ public class MySQL {
             }
         }catch(Exception e){}
         return "ERROR";
+    }
+
+    public static ArrayList<Player> getPlayersOnIsland(String islandName){
+        ArrayList<Player> players = new ArrayList<>();
+        for(Player p : Bukkit.getOnlinePlayers()){
+            if(MySQL.getOnWhichIslandIsLocation(p.getLocation()).equalsIgnoreCase(islandName)){
+                players.add(p);
+            }
+        }
+        return players;
     }
 
     public static int getPlayerGrade(String playerName){
@@ -241,6 +257,255 @@ public class MySQL {
         return obPhase;
     }
 
+    public static int getObQuestNbr(String islandName){
+        return getInformationByNameInt(islandName, "t_island", "completed_daily_objective_number");
+    }
+
+    public static int getObBankMoney(String islandName){
+        return getInformationByNameInt(islandName, "t_island", "bank");
+    }
+
+    public static int getActivePrestige(String islandName){
+        return getInformationByNameInt(islandName, "t_island", "active_prestige");
+    }
+
+    public static boolean alterBankSold(String islandName, long value, int operation){
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            int bankSold = getObBankMoney(islandName);
+            if(operation == -1){
+                if(value > bankSold) return false;
+            }
+            value *= operation;
+            long soldToSet = getObBankMoney(islandName) + value;
+            statement.execute("UPDATE t_island SET bank=" + soldToSet + " WHERE name='" + islandName + "';");
+            return true;
+        }catch(Exception e){throw new RuntimeException(e);}
+    }
+
+    public static void updateQuest(String islandName){
+        Random r = new Random();
+        int realDay = LocalDateTime.now().getDayOfMonth();
+        int realMonth = LocalDateTime.now().getMonthValue();
+        int questDay = realDay;
+        int questMonth = realMonth;
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            ResultSet result = statement.executeQuery("SELECT day, month FROM t_island_daily_quest WHERE island_name='" + islandName + "';");
+            while(result.next()){
+                questDay = result.getInt("day");
+                questMonth = result.getInt("month");
+            }
+            if(realDay == questDay || realMonth != questMonth) return;
+            statement.execute("UPDATE t_island_daily_quest SET day=" + realDay + " WHERE island_name='" + islandName + "';");
+            statement.execute("UPDATE t_island_daily_quest SET month=" + realMonth + " WHERE island_name='" + islandName + "';");
+            statement.execute("UPDATE t_island_daily_quest SET quest_id=" + (r.nextInt(8) + 1) + " WHERE island_name='" + islandName + "';");
+            statement.execute("UPDATE t_island_daily_quest SET completed=0 WHERE island_name='" + islandName + "';");
+            statement.execute("UPDATE t_island_daily_quest SET number=0 WHERE island_name='" + islandName + "';");
+            statement.execute("UPDATE t_island_daily_quest SET rewarded=0 WHERE island_name='" + islandName + "';");
+        }catch(Exception e){throw new RuntimeException(e);}
+    }
+
+    public static boolean hasQuestX(String islandName, int questId){
+        return getDailyQuestId(islandName) == questId;
+    }
+
+    public static int getDailyQuestId(String islandName){
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            ResultSet result = statement.executeQuery("SELECT quest_id FROM t_island_daily_quest WHERE island_name='" + islandName + "';");
+            int questId = 0;
+            while(result.next()){
+                questId = result.getInt("quest_id");
+            }
+            return questId;
+        }catch(Exception e){throw new RuntimeException(e);}
+    }
+
+    public static int getDailyQuestNumber(String islandName){
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            ResultSet result = statement.executeQuery("SELECT number FROM t_island_daily_quest WHERE island_name='" + islandName + "';");
+            int number = 0;
+            while (result.next()) {
+                number = result.getInt("number");
+            }
+            return number;
+        }catch(Exception e){throw new RuntimeException(e);}
+    }
+
+    public static void incrementQuest(String islandName, int toAdd){
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            statement.execute("UPDATE t_island_daily_quest SET number=" + (getDailyQuestNumber(islandName) + toAdd) + " WHERE island_name='" + islandName + "';");
+        }catch(Exception e){throw new RuntimeException(e);}
+    }
+
+    public static boolean isQuestCompleted(String islandName){
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            ResultSet result = statement.executeQuery("SELECT completed FROM t_island_daily_quest WHERE island_name='" + islandName + "';");
+            int isComplete = 0;
+            while(result.next()){
+                isComplete = result.getInt("completed");
+            }
+            return isComplete == 1;
+        }catch(Exception e){throw new RuntimeException(e);}
+    }
+
+    public static void completeQuest(String islandName){
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            statement.execute("UPDATE t_island_daily_quest SET completed=1 WHERE island_name='" + islandName + "';");
+        }catch(Exception e){throw new RuntimeException(e);}
+    }
+
+    public static boolean hasBeenRewarded(String islandName){
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            ResultSet result = statement.executeQuery("SELECT rewarded FROM t_island_daily_quest WHERE island_name='" + islandName + "';");
+            int hasBeenRewarded = 0;
+            while(result.next()){
+                hasBeenRewarded = result.getInt("rewarded");
+            }
+            return hasBeenRewarded == 1;
+        }catch(Exception e){throw new RuntimeException(e);}
+    }
+
+    private static ArrayList<ArrayList<Object>> getIslandShopItems(Player p, String islandName){
+        ArrayList<ArrayList<Object>> items = new ArrayList<>();
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            ResultSet result = statement.executeQuery("SELECT item, chest_x AS x, chest_y AS y, chest_z AS z FROM t_island_shop WHERE island_name='" + islandName + "';");
+            while(result.next()){
+                ArrayList<Object> item = new ArrayList<>();
+                item.add(Main.deserializedItem(result.getString("item")));
+                item.add(new Location(p.getWorld(), result.getInt("x"), result.getInt("y"), result.getInt("z")));
+                items.add(item);
+            }
+        }catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return items;
+    }
+
+    public static void setIslandShopItems(Player p, String islandName){
+        ArrayList<ArrayList<Object>> items = getIslandShopItems(p, islandName);
+        for(ArrayList<Object> item : items){
+            ItemStack it = (ItemStack) item.get(0);
+            Location loc = (Location) item.get(1);
+            FloatingItemsNMS floating = new FloatingItemsNMS(p, new Location(loc.getWorld(), loc.getX(), loc.getY(), loc.getZ()).add(0.5, 1, 0.5), it);
+            floating.setItem(getAsId(loc), getItemId(loc));
+        }
+    }
+
+    public static int getAsId(Location loc){
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            int x = (int) loc.getX();
+            int y = (int) loc.getY();
+            int z = (int) loc.getZ();
+            ResultSet result = statement.executeQuery(String.format("SELECT floating_armostand_id FROM t_island_shop WHERE chest_x=%d AND chest_y=%d AND chest_z=%d;", x, y, z));
+            while(result.next()){
+                return result.getInt("floating_armostand_id");
+            }
+        }catch(Exception e){throw new RuntimeException(e);}
+        return 0;
+    }
+
+    public static int getItemId(Location loc){
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            int x = (int) loc.getX();
+            int y = (int) loc.getY();
+            int z = (int) loc.getZ();
+            ResultSet result = statement.executeQuery(String.format("SELECT floating_item_id FROM t_island_shop WHERE chest_x=%d AND chest_y=%d AND chest_z=%d;", x, y, z));
+            while(result.next()){
+                return result.getInt("floating_item_id");
+            }
+        }catch(Exception e){}
+        return 0;
+    }
+
+    public static boolean isLocationShop(Location loc){
+        if(loc.getBlock().getType() != Material.CHEST) return false;
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            int x = (int) loc.getX();
+            int y = (int) loc.getY();
+            int z = (int) loc.getZ();
+            ResultSet result = statement.executeQuery(String.format("SELECT island_name, sign_direction FROM t_island_shop WHERE chest_x=%d AND chest_y=%d AND chest_z=%d;", x, y, z));
+            String islandName = "ERROR";
+            while(result.next()){
+                islandName = result.getString("island_name");
+            }
+            return !islandName.equalsIgnoreCase("ERROR");
+        }catch(Exception e){throw new RuntimeException(e);}
+    }
+
+    public static BlockFace getShopFacing(Location loc){
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            int x = (int) loc.getX();
+            int y = (int) loc.getY();
+            int z = (int) loc.getZ();
+            ResultSet result = statement.executeQuery(String.format("SELECT sign_direction FROM t_island_shop WHERE chest_x=%d AND chest_y=%d AND chest_z=%d;", x, y, z));
+            String facing = null;
+            while(result.next()){
+                facing = result.getString("sign_direction");
+            }
+            return BlockFace.valueOf(facing);
+        }catch(Exception e){throw new RuntimeException(e);}
+    }
+
+    public static void removeFloatingShopItem(Player p, Location loc){
+        int asId = -666;
+        int itId = -666;
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            int x = (int) loc.getX();
+            int y = (int) loc.getY();
+            int z = (int) loc.getZ();
+            ResultSet result = statement.executeQuery(String.format("SELECT floating_armostand_id, floating_item_id FROM t_island_shop WHERE chest_x=%d AND chest_y=%d AND chest_z=%d;", x, y, z));
+            while(result.next()){
+                asId = result.getInt("floating_armostand_id");
+                itId = result.getInt("floating_item_id");
+            }
+            if(asId == -666 || itId == -666) return;
+        }catch(Exception e){throw new RuntimeException(e);}
+        ServerPlayer sp = ((CraftPlayer) p).getHandle();
+        ServerGamePacketListenerImpl con = sp.connection;
+        con.send(new ClientboundRemoveEntitiesPacket(asId, itId));
+    }
+
+    public static ItemStack getIslandShopItem(Location loc){
+        ItemStack it = new ItemStack(Material.AIR);
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            int x = (int) loc.getX();
+            int y = (int) loc.getY();
+            int z = (int) loc.getZ();
+            ResultSet result = statement.executeQuery(String.format("SELECT item FROM t_island_shop WHERE chest_x=%d AND chest_y=%d AND chest_z=%d;", x, y, z));
+            while(result.next()){
+                it = Main.deserializedItem(result.getString("item"));
+            }
+        }catch(Exception e){throw new RuntimeException(e);}
+        return it;
+    }
+
+    public static int getIslandShopPrice(Location loc){
+        int price = -1;
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            int x = (int) loc.getX();
+            int y = (int) loc.getY();
+            int z = (int) loc.getZ();
+            ResultSet result = statement.executeQuery(String.format("SELECT price FROM t_island_shop WHERE chest_x=%d AND chest_y=%d AND chest_z=%d;", x, y, z));
+            while(result.next()){
+                price = result.getInt("price");
+            }
+        }catch(Exception e){throw new RuntimeException(e);}
+        return price;
+    }
+
+    public static ShopType getIslandShopType(Location loc){
+        int type = 0;
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            int x = (int) loc.getX();
+            int y = (int) loc.getY();
+            int z = (int) loc.getZ();
+            ResultSet result = statement.executeQuery(String.format("SELECT buy_or_sell FROM t_island_shop WHERE chest_x=%d AND chest_y=%d AND chest_z=%d;", x, y, z));
+            while(result.next()){
+                type = result.getInt("buy_or_sell");
+            }
+        }catch(Exception e){throw new RuntimeException(e);}
+        return (type == 1) ? ShopType.buy : ShopType.sell;
+    }
+
     // =========================================================================================
     //                             CONNECTION & DECONNEXION DE LA DB
     // =========================================================================================
@@ -252,6 +517,8 @@ public class MySQL {
             try{statement.execute("CREATE TABLE t_island (id INT NOT NULL AUTO_INCREMENT PRIMARY KEY);");}catch(Exception e){}
             try{statement.execute("ALTER TABLE t_island ADD name VARCHAR(500) NOT NULL UNIQUE;");}catch(Exception e){}
             try{statement.execute("ALTER TABLE t_island ADD prestige_level INT NOT NULL DEFAULT 1;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD active_prestige INT NOT NULL DEFAULT 1;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD completed_daily_objective_number INT NOT NULL DEFAULT 0;");}catch(Exception e){}
             try{statement.execute("ALTER TABLE t_island ADD level FLOAT NOT NULL DEFAULT 0;");}catch(Exception e){}
             try{statement.execute("ALTER TABLE t_island ADD ob_time_break INT NOT NULL DEFAULT 0;");}catch(Exception e){}
             try{statement.execute("ALTER TABLE t_island ADD active_phase VARCHAR(100) NOT NULL DEFAULT \"Plaine\";");}catch(Exception e){}
@@ -265,7 +532,7 @@ public class MySQL {
             try{statement.execute("ALTER TABLE t_island ADD spawn_y INT NOT NULL;");}catch(Exception e){}
             try{statement.execute("ALTER TABLE t_island ADD spawn_z INT NOT NULL;");}catch(Exception e){}
             try{statement.execute("ALTER TABLE t_island ADD allow_visitors INT NOT NULL DEFAULT TRUE;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD bank INT DEFAULT 0;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD bank BIGINT DEFAULT 0;");}catch(Exception e){}
             //création de la table des joueurs
             try{statement.execute("CREATE TABLE t_user (name VARCHAR(20));");}catch(Exception e){}
             try{statement.execute("ALTER TABLE t_user ADD island_id INT NOT NULL;");}catch(Exception e){}
@@ -298,6 +565,25 @@ public class MySQL {
             try{statement.execute("ALTER TABLE t_holo ADD z FLOAT NOT NULL;");}catch(Exception e){}
             try{statement.execute("ALTER TABLE t_holo ADD world VARCHAR(100) NOT NULL;");}catch(Exception e){}
             try{statement.execute("ALTER TABLE t_holo ADD type VARCHAR(100) NOT NULL;");}catch(Exception e){}
+            //création de la table des quêtes journalières
+            try{statement.execute("CREATE TABLE t_island_daily_quest (island_name varchar(500) NOT NULL);");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island_daily_quest ADD day INT NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island_daily_quest ADD month INT NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island_daily_quest ADD number INT DEFAULT 0;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island_daily_quest ADD quest_id INT DEFAULT 0;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island_daily_quest ADD completed INT DEFAULT 0;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island_daily_quest ADD rewarded INT DEFAULT 0;");}catch(Exception e){}
+            //création de la tables des is shop
+            try{statement.execute("CREATE TABLE t_island_shop (island_name varchar(500) NOT NULL);");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island_shop ADD chest_x INT NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island_shop ADD chest_y INT NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island_shop ADD chest_z INT NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island_shop ADD sign_direction VARCHAR(100) NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island_shop ADD price INT NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island_shop ADD item VARCHAR(15000) NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island_shop ADD buy_or_sell TINYINT NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island_shop ADD floating_armostand_id INT NOT NULL;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island_shop ADD floating_item_id INT NOT NULL;");}catch(Exception e){}
         }catch(Exception e){
             throw new RuntimeException(e);
         }

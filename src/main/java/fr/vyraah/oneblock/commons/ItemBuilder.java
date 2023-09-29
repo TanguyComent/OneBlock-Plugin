@@ -48,6 +48,15 @@ public class ItemBuilder {
         return this;
     }
 
+    public ItemBuilder clearComponents(){
+        meta = item.getItemMeta();
+        for(NamespacedKey key : meta.getPersistentDataContainer().getKeys()){
+            meta.getPersistentDataContainer().remove(key);
+        }
+        item.setItemMeta(meta);
+        return this;
+    }
+
     public ItemBuilder setLore(String... lore) {
         meta = item.getItemMeta();
         meta.setLore(Arrays.asList(lore));

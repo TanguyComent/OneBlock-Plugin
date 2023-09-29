@@ -122,7 +122,7 @@ public class oneblock implements CommandExecutor {
                                 """, islandName, x, z, x, z, x, z));
                         int day = LocalDateTime.now().getDayOfMonth();
                         int month = LocalDateTime.now().getMonthValue();
-                        statement.execute(String.format("INSERT INTO t_island_daily_quest (island_name, day, month) VALUES ('%s', %d, %d);", islandName, day, month));
+                        statement.execute(String.format("INSERT INTO t_island_daily_quest (island_id, day, month) VALUES ('%s', %d, %d);", MySQL.getIslandIdByPlayer(p.getName()), day, month));
 
                         //relation joueur / is
                         int islandId = MySQL.getInformationByNameInt(islandName,"t_island" , "id");

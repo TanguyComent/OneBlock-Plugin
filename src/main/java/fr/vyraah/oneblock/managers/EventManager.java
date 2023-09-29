@@ -8,7 +8,6 @@ import org.bukkit.plugin.PluginManager;
 
 public class EventManager {
     public PluginManager pm;
-
     public Main plugin;
     public EventManager(Main plugin) {
         this.plugin = plugin;

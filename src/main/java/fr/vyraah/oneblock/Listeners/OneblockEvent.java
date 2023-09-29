@@ -8,19 +8,23 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
+import org.bukkit.block.Container;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockFadeEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -493,5 +497,12 @@ public class OneblockEvent implements Listener {
         if(p.getLocation().getY() <= -80){
             p.teleport(MySQL.getSpawnLocationByIslandName(MySQL.getOnWhichIslandIsLocation(p.getLocation())).add(0, 2, 0));
         }
+    }
+
+    @EventHandler
+    public void onInteract(PlayerInteractEvent e){
+        if(MySQL.isPlayerOnHisIsland(e.getPlayer())) return;
+        if(e.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+        if(e.getClickedBlock().getState() instanceof InventoryHolder) e.setCancelled(true);
     }
 }

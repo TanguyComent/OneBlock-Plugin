@@ -235,10 +235,10 @@ public final class Main extends JavaPlugin {
         mysql.disconnect();
     }
 
-    public static String serializedItem(ItemStack it) throws IOException {
+    public static String serializedObject(Object object) throws IOException {
         ByteArrayOutputStream io = new ByteArrayOutputStream();
         BukkitObjectOutputStream os = new BukkitObjectOutputStream(io);
-        os.writeObject(it);
+        os.writeObject(object);
         os.flush();
 
         byte[] serializedObject = io.toByteArray();
@@ -246,20 +246,25 @@ public final class Main extends JavaPlugin {
         return Base64.getEncoder().encodeToString(serializedObject);
     }
 
-    public static ItemStack deserializedItem(String string) throws IOException, ClassNotFoundException {
-        byte[] serializedObject = Base64.getDecoder().decode(string);
+    public static Object deserializedObject(String serializedObject) throws IOException, ClassNotFoundException {
+        byte[] biteSerializedObject = Base64.getDecoder().decode(serializedObject);
 
-        ByteArrayInputStream is = new ByteArrayInputStream(serializedObject);
+        ByteArrayInputStream is = new ByteArrayInputStream(biteSerializedObject);
         BukkitObjectInputStream in = new BukkitObjectInputStream(is);
 
-        return (ItemStack) in.readObject();
+        return in.readObject();
+    }
+
+    public static int getInventorySpace(Player p){
+        int space = 0;
+        for(int i = 0; i<=35; i++){
+            if(p.getInventory().getItem(i) == null) space++;
+        }
+        return space;
     }
 
     public static boolean isFull(Player p){
-        for(int i = 0; i<=35; i++){
-            if(p.getInventory().getItem(i) == null) return false;
-        }
-        return true;
+        return getInventorySpace(p) == 0;
     }
 
 }

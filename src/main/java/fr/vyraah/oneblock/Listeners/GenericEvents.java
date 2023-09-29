@@ -92,7 +92,7 @@ public class GenericEvents implements Listener {
             sellChest.addStringComponent("sellshop", "");
             sellChest.addIntComponent("buyorsell", (int) shopInfo.get(0));
             sellChest.addIntComponent("price", price);
-            sellChest.addStringComponent("item", Main.serializedItem(toSell));
+            sellChest.addStringComponent("item", Main.serializedObject(toSell));
             p.getPersistentDataContainer().remove(NamespacedKey.fromString("shop-price"));
             p.sendMessage(Main.prefix + "§2Création de shop terminée");
             p.getInventory().addItem(sellChest.toItemStack());

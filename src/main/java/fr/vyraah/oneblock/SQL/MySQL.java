@@ -1,5 +1,6 @@
 package fr.vyraah.oneblock.SQL;
 
+import fr.vyraah.oneblock.enums.IslandPermission;
 import fr.vyraah.oneblock.enums.ShopType;
 import fr.vyraah.oneblock.Main;
 import fr.vyraah.oneblock.commons.FloatingItemsNMS;
@@ -514,6 +515,23 @@ public class MySQL {
         return (type == 1) ? ShopType.buy : ShopType.sell;
     }
 
+    public static boolean hasPermission(Player p, IslandPermission perm, int islandId){
+        String[] permList = new String[0];
+        // 0 : Co leader | 1 : Moderator | 2 : Member | 3 : Visitor
+        String permName = "perm_" + perm;
+        if(islandId == getIslandIdByIslandName(p.getName()) && getPlayerGrade(p.getName()) == 1) return true;
+        int pPerm = (islandId == getIslandIdByPlayer(p.getName())) ? getPlayerGrade(p.getName()) - 2 : 3;
+        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
+            ResultSet result = statement.executeQuery(String.format("SELECT %s AS perm FROM t_island WHERE island_id=%d;", permName, getIslandIdByPlayer(p.getName())));
+            while(result.next()){
+                permList = result.getString("perm").split("\\d");
+            }
+        }catch(Exception e){
+            throw new RuntimeException(e);
+        }
+        return permList[pPerm].equals("1");
+    }
+
     // =========================================================================================
     //                             CONNECTION & DECONNEXION DE LA DB
     // =========================================================================================
@@ -541,6 +559,23 @@ public class MySQL {
             try{statement.execute("ALTER TABLE t_island ADD spawn_z INT NOT NULL;");}catch(Exception e){}
             try{statement.execute("ALTER TABLE t_island ADD allow_visitors INT NOT NULL DEFAULT TRUE;");}catch(Exception e){}
             try{statement.execute("ALTER TABLE t_island ADD bank BIGINT DEFAULT 0;");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD perm_break_block VARCHAR(4) DEFAULT \"1110\";");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD perm_place_block VARCHAR(4) DEFAULT \"1110\";");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD perm_manage_permissions VARCHAR(4) DEFAULT \"1000\";");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD perm_manage_settings VARCHAR(4) DEFAULT \"1000\";");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD perm_invite_player VARCHAR(4) DEFAULT \"1100\";");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD perm_kick_player VARCHAR(4) DEFAULT \"1100\";");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD perm_place_shop VARCHAR(4) DEFAULT \"1110\";");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD perm_bank_withdraw VARCHAR(4) DEFAULT \"1000\";");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD perm_bank_deposit VARCHAR(4) DEFAULT \"1110\";");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD perm_promote_player VARCHAR(4) DEFAULT \"1000\";");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD perm_remote_player VARCHAR(4) DEFAULT \"1000\";");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD perm_place_warps VARCHAR(4) DEFAULT \"1100\";");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD perm_remove_warps VARCHAR(4) DEFAULT \"1100\";");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD perm_upgrade_prestige VARCHAR(4) DEFAULT \"1100\";");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD perm_upgrade_phase VARCHAR(4) DEFAULT \"1100\";");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD perm_select_prestige VARCHAR(4) DEFAULT \"1100\";");}catch(Exception e){}
+            try{statement.execute("ALTER TABLE t_island ADD perm_select_phase VARCHAR(4) DEFAULT \"1100\";");}catch(Exception e){}
             //création de la table des joueurs
             try{statement.execute("CREATE TABLE t_user (name VARCHAR(20));");}catch(Exception e){}
             try{statement.execute("ALTER TABLE t_user ADD island_id INT NOT NULL;");}catch(Exception e){}

@@ -23,6 +23,78 @@ import java.util.Random;
 public class MySQL {
     private Connection conn;
 
+    public static boolean createIsland(Player creator, String islandName, int x, int y, int z){
+        String islandQuery = "INSERT INTO ISLAND (islandName, islandCenterX, islandCenterY, islandCenterZ, islandOneBlockX, islandOneBlockY, islandOneBlockZ, islandSpawnX, islandSpawnY, islandSpawnZ) VALUES (?,?,?,?,?,?,?,?,?,?)";
+        String banqueQuery = "INSERT INTO BANQUE (islandId) VALUES (?)";
+        String gradeQuery  = """
+                              INSERT INTO GRADE (islandId, gradeName, gradeColor)
+                              VALUES
+                              (?, 'Leader', 'r'), (?, 'Co-leader', 'o'), (?, 'Administrator', 'y'), (?, 'Member', 'g'), (?, 'Visitor', 'g')
+                             """;
+        try(PreparedStatement ps1 = Main.INSTANCE.mysql.getConnection().prepareStatement(islandQuery, Statement.RETURN_GENERATED_KEYS);
+            PreparedStatement ps2 = Main.INSTANCE.mysql.getConnection().prepareStatement(banqueQuery);
+            PreparedStatement ps3 = Main.INSTANCE.mysql.getConnection().prepareStatement(gradeQuery, Statement.RETURN_GENERATED_KEYS)){
+
+            //Insersion de l'ile dans la bdd
+            ps1.setString(1, islandName);
+            ps1.setInt(2, x);
+            ps1.setInt(3, y);
+            ps1.setInt(4, z);
+            ps1.setInt(5, x);
+            ps1.setInt(6, y);
+            ps1.setInt(7, z);
+            ps1.setInt(8, x);
+            ps1.setInt(9, y);
+            ps1.setInt(10, z);
+
+            ps1.executeUpdate();
+
+            //Récupération de l'id de l'ile
+            int islandId = 0;
+
+            try(var generatedId = ps1.getGeneratedKeys()){
+                if(generatedId.next()){
+                    islandId = generatedId.getInt(1);
+                }
+            }
+
+            //Insersion du joueurs dans l'ile avec le grade chef, suppression de l'ile si erreur
+            if(!addPlayerToIsland(creator, islandId, 0)){
+                //Pour plus tard, supprimer l'ile qui a été créé
+                return false;
+            }
+
+            //Insersion de la banque d'ile
+            ps2.setInt(1, islandId);
+
+            ps2.executeUpdate();
+
+            //Insersion des grade par default de l'ile
+            for(int i = 1; i <= 13; i += 3){
+                ps3.setInt(i, islandId);
+            }
+
+            ps3.executeUpdate();
+        }catch (Exception e){
+            return false;
+        }
+        return true;
+    }
+
+    public static boolean addPlayerToIsland(Player p, int islandId, int gradeId){
+        String query = "UPDATE PLAYER SET islandId = ?, gradeId = ? WHERE playerUUID = ?";
+        try(PreparedStatement ps = Main.INSTANCE.mysql.getConnection().prepareStatement(query)){
+            ps.setInt(1, islandId);
+            ps.setString(2, p.getUniqueId().toString());
+            ps.setInt(3, gradeId);
+
+            ps.executeUpdate();
+        }catch(Exception e){
+            return false;
+        }
+        return true;
+    }
+
     public static boolean getPlayerHaveAnIsland(Player p){
         try{
             Connection con = Main.INSTANCE.mysql.getConnection();

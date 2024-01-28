@@ -136,7 +136,7 @@ public class oneblock implements CommandExecutor {
                                 """, p.getName(), islandId));
                     }catch (SQLIntegrityConstraintViolationException e){
                         p.sendMessage(Main.prefix + ChatColor.RED + "Cette ile existe deja, veuiller choisir un autre nom !");
-                    } catch (Exception e){
+                    }catch(Exception e){
                         p.sendMessage(Main.prefix + ChatColor.RED + "ERREUR INCONNUE : votre ile n'a pas pu etre cree veuillez reessayer");
                         return false;
                     }

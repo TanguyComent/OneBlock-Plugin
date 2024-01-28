@@ -18,12 +18,14 @@ import org.bukkit.inventory.ItemStack;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
 public class MySQL {
     private Connection conn;
 
-    public static boolean createIsland(Player creator, String islandName, int x, int y, int z){
+    public static void createIsland(Player creator, String islandName, int x, int y, int z) throws SQLException {
         String islandQuery = "INSERT INTO ISLAND (islandName, islandCenterX, islandCenterY, islandCenterZ, islandOneBlockX, islandOneBlockY, islandOneBlockZ, islandSpawnX, islandSpawnY, islandSpawnZ) VALUES (?,?,?,?,?,?,?,?,?,?)";
         String banqueQuery = "INSERT INTO BANQUE (islandId) VALUES (?)";
         String gradeQuery  = """
@@ -31,9 +33,17 @@ public class MySQL {
                               VALUES
                               (?, 'Leader', 'r'), (?, 'Co-leader', 'o'), (?, 'Administrator', 'y'), (?, 'Member', 'g'), (?, 'Visitor', 'g')
                              """;
-        try(PreparedStatement ps1 = Main.INSTANCE.mysql.getConnection().prepareStatement(islandQuery, Statement.RETURN_GENERATED_KEYS);
-            PreparedStatement ps2 = Main.INSTANCE.mysql.getConnection().prepareStatement(banqueQuery);
-            PreparedStatement ps3 = Main.INSTANCE.mysql.getConnection().prepareStatement(gradeQuery, Statement.RETURN_GENERATED_KEYS)){
+        String permissionQuery = "INSERT INTO GRADE_PERMISSION (gradeId, permissionName, permissionValue) VALUES (?,?,?)";
+        String settingQuery = "INSERT INTO ISLAND_SETTING (islandId, settingTitle, settingValue) VALUES (?,?,?)";
+        Connection con  = Main.INSTANCE.mysql.getConnection();
+        try(PreparedStatement ps1 = con.prepareStatement(islandQuery, Statement.RETURN_GENERATED_KEYS);
+            PreparedStatement ps2 = con.prepareStatement(banqueQuery);
+            PreparedStatement ps3 = con.prepareStatement(gradeQuery, Statement.RETURN_GENERATED_KEYS);
+            PreparedStatement ps4 = con.prepareStatement(permissionQuery);
+            PreparedStatement ps5 = con.prepareStatement(settingQuery)){
+
+
+            con.setAutoCommit(false);
 
             //Insersion de l'ile dans la bdd
             ps1.setString(1, islandName);
@@ -60,8 +70,8 @@ public class MySQL {
 
             //Insersion du joueurs dans l'ile avec le grade chef, suppression de l'ile si erreur
             if(!addPlayerToIsland(creator, islandId, 0)){
-                //Pour plus tard, supprimer l'ile qui a été créé
-                return false;
+                con.rollback();
+                throw new RuntimeException("Failed to add player to the island");
             }
 
             //Insersion de la banque d'ile
@@ -75,18 +85,54 @@ public class MySQL {
             }
 
             ps3.executeUpdate();
-        }catch (Exception e){
-            return false;
+
+            HashMap<String, Integer> map = new HashMap<>();
+            var result = con.createStatement().executeQuery("SELECT permissionName AS pn, permissionLevel AS pl FROM PERMISSION");
+            while(result.next()){
+                map.put(result.getString("pn"), result.getInt("pl"));
+            }
+
+            //Ajout des map a chaque grade
+            //boucle de tout les grades
+            try(var generatedId = ps3.getGeneratedKeys()){
+                for(int i = 1; i <= 5; i++){
+                    int gradeId = generatedId.getInt(i);
+                    //boucle de toutes les map
+                    for(Map.Entry<String, Integer> entry : map.entrySet()){
+                        ps4.setInt(1, gradeId);
+                        ps4.setString(2, entry.getKey());
+                        ps4.setByte(3, (byte) (i <= entry.getValue() ? 1 : 0));
+                        ps4.addBatch(); // Ajout à un lot
+                    }
+                }
+            }
+
+            ps4.executeBatch();
+
+            //Ajout des settings d'ile
+            result = con.createStatement().executeQuery("SELECT settingTitle AS st, settingDefault AS sd FROM SETTING");
+            while(result.next()){
+                ps5.setInt(1, islandId);
+                ps5.setString(2, result.getString("st"));
+                ps5.setInt(3, result.getInt("sd") == 1 ? 1 : 0);
+                ps5.addBatch();
+            }
+
+            ps5.executeBatch();
+
+            con.commit();
+        }catch (SQLException e){
+            con.rollback();
+            throw(e);
         }
-        return true;
     }
 
     public static boolean addPlayerToIsland(Player p, int islandId, int gradeId){
         String query = "UPDATE PLAYER SET islandId = ?, gradeId = ? WHERE playerUUID = ?";
         try(PreparedStatement ps = Main.INSTANCE.mysql.getConnection().prepareStatement(query)){
             ps.setInt(1, islandId);
-            ps.setString(2, p.getUniqueId().toString());
-            ps.setInt(3, gradeId);
+            ps.setInt(2, gradeId);
+            ps.setString(3, p.getUniqueId().toString());
 
             ps.executeUpdate();
         }catch(Exception e){

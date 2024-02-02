@@ -97,10 +97,12 @@ public class oneblock implements CommandExecutor {
                         p.sendMessage(Main.prefix + ChatColor.RED + "/is create <nom> pour créer une ile");
                         return false;
                     }
+
                     String islandName = args[1];
 
                     if(islandName.equalsIgnoreCase("error")){
                         p.sendMessage(Main.prefix + "Ce nom est utilisé par le programme à des fin de détection d'erreur ! Il est par conséquent interdit !\nVous pouvez cependant remplacer des lettres par des chiffres ou rajouter un charactère à la fin !");
+                        return false;
                     }
 
                     //creation des data
@@ -109,31 +111,12 @@ public class oneblock implements CommandExecutor {
                         p.sendMessage(Main.prefix + ChatColor.RED + "tu as deja une ile");
                         return false;
                     }
+
                     int x = Main.INSTANCE.config.getInt("next_island_x");
                     int z = Main.INSTANCE.config.getInt("next_island_z");
+
                     try{
-                        MySQL sql = Main.INSTANCE.mysql;
-                        Statement statement = sql.getConnection().createStatement();
-
-                        //creation des data de l'is
-                        statement.execute(String.format("""
-                                INSERT INTO t_island (name, center_x, center_z, center_y, oneblock_x, oneblock_z, oneblock_y, spawn_x, spawn_z, spawn_y)
-                                VALUES ("%s", %d, %d, 0, %d, %d, 0, %d, %d, 0);
-                                """, islandName, x, z, x, z, x, z));
-                        int day = LocalDateTime.now().getDayOfMonth();
-                        int month = LocalDateTime.now().getMonthValue();
-                        statement.execute(String.format("INSERT INTO t_island_daily_quest (island_id, day, month) VALUES ('%s', %d, %d);", MySQL.getIslandIdByPlayer(p.getName()), day, month));
-
-                        //relation joueur / is
-                        int islandId = MySQL.getInformationByNameInt(islandName,"t_island" , "id");
-                        if(islandId == 0){
-                            p.sendMessage(Main.prefix + ChatColor.RED + "Erreur lors de la création de l'ile");
-                            return false;
-                        }
-                        statement.execute(String.format("""
-                                INSERT INTO t_user (name, island_id)
-                                VALUES ("%s", %d);
-                                """, p.getName(), islandId));
+                       MySQL.createIsland(p, islandName, x, 0, z);
                     }catch (SQLIntegrityConstraintViolationException e){
                         p.sendMessage(Main.prefix + ChatColor.RED + "Cette ile existe deja, veuiller choisir un autre nom !");
                     }catch(Exception e){
@@ -268,16 +251,16 @@ public class oneblock implements CommandExecutor {
                         return false;
                     }
                     String target = args[1];
-                    if(MySQL.getInformationByNameInt(p.getName(), "t_user", "island_id") != MySQL.getInformationByNameInt(target, "t_user", "island_id")){
+                    if(MySQL.inSameIsland(p.getName(), target)){
                         p.sendMessage(Main.prefix + ChatColor.RED + "Ce joueur n est pas dans votre ile !");
                         return false;
                     }
-                    int userPermission = MySQL.getInformationByNameInt(p.getName(), "t_user", "user_island_grade");
-                    int targetPermission = MySQL.getInformationByNameInt(target, "t_user", "user_island_grade");
+
+                    boolean authorised = false;
 
                     //regarder si le joueur a la perm de kick
 
-                    if(userPermission >= targetPermission){
+                    if(!authorised){
                         p.sendMessage(Main.prefix + ChatColor.RED + "Vous ne pouvez pas kick ce joueur de votre ile !");
                         return false;
                     }
@@ -302,40 +285,8 @@ public class oneblock implements CommandExecutor {
                     }
 
                     String target = args[1];
-                    boolean validInvite = false;
-                    try(Statement statement = Main.INSTANCE.mysql.getConnection().createStatement()){
-                        //on va chercher l'invitation dans la bdd
-                        ResultSet result = statement.executeQuery("SELECT * FROM t_pending_island_invite WHERE name=\"" + p.getName() + "\";");
-                        String stringResultPlayer = "";
-                        String stringResultIsland = "";
-                        int islandId = -1;
-                        while(result.next()){
-                            stringResultIsland = result.getString("island_name");
-                            stringResultPlayer = result.getString("island_invitation_sender");
-                        }
-                        //si l'invitation est un nom d'ile
-                        if(stringResultIsland.equalsIgnoreCase(target)){
-                            validInvite = true;
-                            islandId = MySQL.getInformationByNameInt(target, "t_island", "id");
-                        }
-                        //si l'invitation est un pseudo de joueur
-                        if(stringResultPlayer.equalsIgnoreCase(target)){
-                            validInvite = true;
-                            islandId = MySQL.getInformationByNameInt(target, "t_user", "island_id");
-                        }
-                        //ajout du joueur a l'is via la bdd (table t_user)
-                        if(validInvite && islandId != -1){
-                            statement.execute(String.format("""
-                                    INSERT INTO t_user (name, island_id, user_island_grade)
-                                    VALUES ("%s", %d, %d);
-                                    """, p.getName(), islandId, 4));
-                            statement.execute("DELETE FROM t_pending_island_invite WHERE name=\"" + p.getName() + "\";");
-                            p.sendMessage(Main.prefix + ChatColor.GREEN + "Tu a bien rejoin l ile " + MySQL.getIslandNameByPlayer(p.getName()) + " !");
-                        }else{
-                            p.sendMessage(Main.prefix + ChatColor.RED + "invitation invalide : " + target);
-                        }
-                        return true;
-                    }catch (Exception e){return false;}
+
+                    //A refaire
                 }
 
                 // CMD : /is phase
@@ -379,7 +330,7 @@ public class oneblock implements CommandExecutor {
                         return false;
                     }
                     String target = args[1];
-                    boolean canVisit = MySQL.getInformationByNameInt(target, "t_island", "allow_visitors") == 1;
+                    boolean canVisit = false; //Récuperer le setting invite
                     if(canVisit){
                         teleportPlayerToIsland(p, target);
                         p.sendMessage(Main.prefix + ChatColor.GREEN + "Bienvenue sur l'ile " + ChatColor.GOLD + target);
@@ -391,21 +342,6 @@ public class oneblock implements CommandExecutor {
                 // CMD : /is setwarp
                 case "setwarp" -> {
                     if(args.length == 1) return false;
-                    if(MySQL.isPlayerOnHisIsland(p)){
-                        try(Statement statement = Main.INSTANCE.mysql.getConnection().createStatement()){
-                            statement.execute(String.format("""
-                                    INSERT INTO t_island_warp (name, island_id, warp_x, warp_y, warp_z, yaw, pitch)
-                                    VALUES ("%s", %d, %d, %d, %d, %d, %d);
-                                    """, args[1], MySQL.getInformationByNameInt(MySQL.getIslandNameByPlayer(p.getName()), "t_island", "id"),(int) p.getLocation().getX()
-                                    , (int) p.getLocation().getY(), (int) p.getLocation().getZ(), (int) p.getLocation().getYaw(), (int) p.getLocation().getPitch()));
-                        } catch (SQLException e) {
-                            throw new RuntimeException(e);
-                        }
-                        p.sendMessage(Main.prefix + ChatColor.GREEN + "Le warp " + ChatColor.GOLD + args[1] + ChatColor.GREEN + " a bien été crée");
-                    }else{
-                        p.sendMessage(Main.prefix + ChatColor.RED + "Vous devez être sur votre ile pour pouvoir déposer un is warp !");
-                        return false;
-                    }
                 }
 
                 // CMD : /is warp
@@ -415,7 +351,7 @@ public class oneblock implements CommandExecutor {
                         return false;
                     }
                     String target = "";
-                    int id = MySQL.getInformationByNameInt(args[1], "t_island_warp", "island_id");
+                    int id = 0;
                     if(id == 0){
                         p.sendMessage(Main.prefix + ChatColor.RED + "Warp inconnue !");
                         return false;
@@ -428,46 +364,16 @@ public class oneblock implements CommandExecutor {
                     } catch (SQLException e) {
                         throw new RuntimeException(e);
                     }
-                    boolean canVisit = MySQL.getInformationByNameInt(target, "t_island", "allow_visitors") == 1;
+                    boolean canVisit = false; // recuperer dans les settings la perm visit
                     if(!canVisit) return false;
-                    int x = MySQL.getInformationByNameInt(args[1], "t_island_warp", "warp_x");
-                    int y = MySQL.getInformationByNameInt(args[1], "t_island_warp", "warp_y");
-                    int z = MySQL.getInformationByNameInt(args[1], "t_island_warp", "warp_z");
-                    int yaw = MySQL.getInformationByNameInt(args[1], "t_island_warp", "yaw");
-                    int pitch = MySQL.getInformationByNameInt(args[1], "t_island_warp", "pitch");
-                    Location loc = new Location(Bukkit.getWorld("islands"), x, y, z, yaw, pitch);
+                    Location loc = new Location(Bukkit.getWorld("islands"), 0, 0, 0, 0, 0); // Recuperer la Loccation du warp
                     p.teleport(loc);
                     p.sendMessage(Main.prefix + ChatColor.GREEN + "Teleportation reussi !");
                  }
 
                 //cmd /is promote && /is remote
                 case "promote", "remote" -> {
-                    if(args.length == 1 || args.length > 2){
-                        p.sendMessage(Main.prefix + "§4Mauvaise utilisation de la commande : /is" + args[0] + "<player>");
-                        return false;
-                    }
-                    String playerName = args[1];
-                    if(!MySQL.getIslandNameByPlayer(playerName).equals(MySQL.getIslandNameByPlayer(p.getName()))){
-                        p.sendMessage(Main.prefix + "§4" + playerName + " n'est pas sur votre ile");
-                        return false;
-                    }
-                    if(MySQL.getPlayerGrade(playerName) <= MySQL.getPlayerGrade(p.getName())){
-                        p.sendMessage(Main.prefix + "§4Vous n'avez pas la permission de "+ args[0] + " " + playerName);
-                        return false;
-                    }
-                    if(args[0].equals("remote") && MySQL.getPlayerGrade(playerName) == 4){
-                        p.sendMessage(Main.prefix + "§4Ce joueur a deja le grade minimum, par conséquant, vous ne pouvez pas le remote.");
-                        return false;
-                    }
-                    if(args[0].equals("promote") && MySQL.getPlayerGrade(p.getName()) == 1 && MySQL.getPlayerGrade(playerName) == 2){
-                        p.sendMessage(Main.prefix + "§4Ce joueur ne peut pas être promote, cependant, si vous voulez qu'il devienne le fondateur de votre ile vous pouvez utiliser la commande /is lead " + playerName);
-                        return false;
-                    }
-                    int newGrade = MySQL.getPlayerGrade(playerName) + (args[0].equals("promote") ? -1 : 1);
-                    try(Statement statement = Main.INSTANCE.mysql.getConnection().createStatement()){
-                        statement.execute("UPDATE t_user SET user_island_grade=" + newGrade + " WHERE island_id=" + MySQL.getInformationByNameInt(MySQL.getIslandNameByPlayer(playerName), "t_island", "id") + " AND name='" + playerName + "';");
-                        p.sendMessage(Main.prefix + "§2Le joueur " + playerName + " à bien été " + args[0]);
-                    }catch(Exception e){throw new RuntimeException(e);}
+                    //a refaire
                 }
 
                 //cmd /is ban
@@ -615,10 +521,7 @@ public class oneblock implements CommandExecutor {
     }
 
     public static void teleportPlayerToIsland(Player p, String islandName){
-        int x = MySQL.getInformationByNameInt(islandName, "t_island", "center_x");
-        int y = MySQL.getInformationByNameInt(islandName, "t_island", "center_y");
-        int z = MySQL.getInformationByNameInt(islandName, "t_island", "center_z");
-        Location loc = new Location(Bukkit.getWorld("islands"), x, y + 2, z);
+        Location loc = new Location(Bukkit.getWorld("islands"), 0, 0 + 2, 0); // recuperer la loc de spawn de l'ile
         p.teleport(loc);
         int borderSize = Main.INSTANCE.radiusLevel.get(MySQL.getIslandPrestigeByIslandName(islandName))*2;
         Main.INSTANCE.worldBorderApi.setBorder(p, borderSize, loc);

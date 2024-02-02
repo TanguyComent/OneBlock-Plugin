@@ -26,7 +26,7 @@ public class MySQL {
     private Connection conn;
 
     public static void createIsland(Player creator, String islandName, int x, int y, int z) throws SQLException {
-        String islandQuery = "INSERT INTO ISLAND (islandName, islandCenterX, islandCenterY, islandCenterZ, islandOneBlockX, islandOneBlockY, islandOneBlockZ, islandSpawnX, islandSpawnY, islandSpawnZ) VALUES (?,?,?,?,?,?,?,?,?,?)";
+        String islandQuery = "INSERT INTO ISLAND (islandName, islandCenterX, islandCenterY, islandCenterZ, islandOneBlockX, islandOneBlockY, islandOneBlockZ, islandSpawnX, islandSpawnY, islandSpawnZ, islandQuestDay, islandQuestMonth) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)";
         String banqueQuery = "INSERT INTO BANQUE (islandId) VALUES (?)";
         String gradeQuery  = """
                               INSERT INTO GRADE (islandId, gradeName, gradeColor)
@@ -56,6 +56,8 @@ public class MySQL {
             ps1.setInt(8, x);
             ps1.setInt(9, y);
             ps1.setInt(10, z);
+            ps1.setInt(11, LocalDateTime.now().getDayOfMonth());
+            ps1.setInt(12, LocalDateTime.now().getMonthValue());
 
             ps1.executeUpdate();
 
@@ -142,45 +144,70 @@ public class MySQL {
     }
 
     public static boolean getPlayerHaveAnIsland(Player p){
-        try{
-            Connection con = Main.INSTANCE.mysql.getConnection();
-            ResultSet result = con.createStatement().executeQuery("SELECT * FROM t_user;");
-            ArrayList<String> existingUsers = new ArrayList<>();
-            while(result.next()){
-                existingUsers.add(result.getString("name"));
-            }
-            if(existingUsers.contains(p.getName())) return true;
-        }catch (Exception e){}
+        String sql = "SELECT islandId FROM PLAYER WHERE playerUUID = ? AND islandId IS NOT NULL";
+        try(PreparedStatement ps = Main.INSTANCE.mysql.getConnection().prepareStatement(sql)){
+            ps.setString(1, p.getUniqueId().toString());
+
+            ResultSet result = ps.executeQuery();
+
+            if(result.next()) return true;
+        }catch(SQLException e){
+            e.printStackTrace();
+        }
         return false;
     }
 
     public static String getIslandNameByPlayer(String playerName){
-        String islandName = "";
-        try{
-            Statement statement = Main.INSTANCE.mysql.getConnection().createStatement();
-            ResultSet result = statement.executeQuery("SELECT * FROM t_user WHERE name=\"" + playerName + "\";");
-            int id = 0;
-            while(result.next()){
-                id = result.getInt("island_id");
-            }
-            result = statement.executeQuery("SELECT * FROM t_island WHERE id=" + id + ";");
-            while(result.next()){
-                islandName = result.getString("name");
-            }
-        }catch (Exception e){}
-        return islandName;
+        String sql = """
+                SELECT islandName
+                FROM ISLAND i
+                INNER JOIN PLAYER p ON i.islandId = p.islandId
+                WHERE playerName = ?
+                """;
+        try(PreparedStatement ps = Main.INSTANCE.mysql.getConnection().prepareStatement(sql)){
+            ps.setString(1, playerName);
+
+            ResultSet result = ps.executeQuery();
+            if(result.next()) return result.getString("islandName");
+        }catch (SQLException e){
+            e.printStackTrace();
+        }
+        return "";
     }
 
-    public static int getInformationByNameInt(String name, String table, String information){
-        int i = 0;
-        try{
-            Statement statement = Main.INSTANCE.mysql.getConnection().createStatement();
-            ResultSet result = statement.executeQuery("SELECT " + information + " FROM " + table + " WHERE name=\"" + name + "\";");
-            while(result.next()){
-                i = result.getInt(information);
+    public static Location getCenterLocationByIslandName(String islandName){
+        String sql = "SELECT islandCenterX AS X, islandCenterY AS Y, islandCenterZ AS Z FROM ISLAND WHERE islandName = ?";
+        try(PreparedStatement ps = Main.INSTANCE.mysql.getConnection().prepareStatement(sql)){
+            ps.setString(1, islandName);
+
+            ResultSet res = ps.executeQuery();
+            if(res.next()){
+                return new Location(Bukkit.getWorld("islands"), res.getInt("X"), res.getInt("Y"), res.getInt("Z"));
             }
-        }catch (Exception e){}
-        return i;
+        }catch (SQLException e){
+            e.printStackTrace();
+            throw new RuntimeException("erreur lors de l'execution du SQL");
+        }
+        throw new RuntimeException("L'ile ciblée semble introuvble");
+    }
+
+    public static boolean inSameIsland(String player1, String player2){
+        String sql = """
+                SELECT p1.islandId
+                FROM PLAYER p1
+                INNER JOIN PLAYER p2 ON p1.islandId = p2.islandId
+                WHERE p1.playerName = ?
+                AND p2.playerName = ?
+                """;
+        try(PreparedStatement ps = Main.INSTANCE.mysql.getConnection().prepareStatement(sql)){
+            ps.setString(1, player1);
+            ps.setString(2, player2);
+            ResultSet res = ps.executeQuery();
+            if(res.next()) return true;
+        }catch(SQLException e){
+            e.printStackTrace();
+        }
+        return false;
     }
 
     public static boolean isPlayerOnHisIsland(Player p){
@@ -188,32 +215,32 @@ public class MySQL {
     }
 
     public static boolean isLocationIsInPlayerIsland(Player p, Location loc){
-        if(!getPlayerHaveAnIsland(p)) return false;
-        if(!loc.getWorld().getName().equals("islands")) return false;
-        int x = getInformationByNameInt(getIslandNameByPlayer(p.getName()), "t_island", "center_x");
-        int z = getInformationByNameInt(getIslandNameByPlayer(p.getName()), "t_island", "center_z");
-        int px = (int) loc.getX();
-        int pz = (int) loc.getZ();
-        int radius = Main.INSTANCE.radiusLevel.get(MySQL.getIslandPrestigeByPlayer(p));
-        return px <= x + radius && px >= x - radius && pz <= z + radius && pz >= z - radius;
+        String islandName = getIslandNameByPlayer(p.getName());
+        Location center = getCenterLocationByIslandName(islandName);
+        int radius = Main.INSTANCE.radiusLevel.get(getIslandPrestigeByIslandName(islandName));
+        //Vérification sur un plan 2D de la distance des coordonnés
+        return loc.add(0, -loc.getY(), 0).distance(center.add(0, -center.getY(), 0)) <= radius;
     }
 
     public static String getOnWhichIslandIsLocation(Location loc){
         if(!loc.getWorld().getName().equalsIgnoreCase("islands")){return "Error you are not in the good world";}
-        int x = 0;
-        int z = 0;
-        while(true){
-            if(x >= Main.INSTANCE.config.getInt("next_island_x") && z >= Main.INSTANCE.config.getInt("next_island_z")) return "ERROR";
-            Location testLoc = new Location(Bukkit.getWorld("islands"), x, 0, z);
-            if(new Location(Bukkit.getWorld("islands"), loc.getX(), 0, loc.getZ()).distance(testLoc) <= 300) break;
-            if( x == z ){ x += 3000; } else { z += 3000; }
+        int x = (int) loc.getX();
+        int z = (int) loc.getZ();
+        int remainsX = x % 3000;
+        int remainsZ = z % 3000;
+        //Les iles sont espacés de 3000 chacunes : Ex : loc.x = 4600 = loc.x % 3000 > 1500 donc x = 4600 + 3000 - 1600 = 6000
+        x += remainsX < 1500 ? - remainsX : 3000 - remainsX;
+        z += remainsZ < 1500 ? - remainsZ : 3000 - remainsZ;
+        String sql = "SELECT islandName FROM ISLAND WHERE islandCenterX = ? AND islandCenterZ = ?";
+        try(PreparedStatement ps = Main.INSTANCE.mysql.getConnection().prepareStatement(sql)){
+            ps.setInt(1, x);
+            ps.setInt(2, z);
+
+            ResultSet result = ps.executeQuery();
+            if(result.next()) return result.getString("islandName");
+        }catch (SQLException e){
+            e.printStackTrace();
         }
-        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
-            ResultSet result = statement.executeQuery("SELECT name FROM t_island WHERE center_x=" + x + " AND center_z=" + z + ";");
-            while(result.next()){
-                return result.getString("name");
-            }
-        }catch(Exception e){}
         return "ERROR";
     }
 
@@ -228,27 +255,27 @@ public class MySQL {
     }
 
     public static int getPlayerGrade(String playerName){
-        return getInformationByNameInt(playerName, "t_user", "user_island_grade");
+        return 0;
     }
 
     public static int getIslandLevelByPlayer(Player p){
-        return getInformationByNameInt(getIslandNameByPlayer(p.getName()), "t_island", "level");
+        return 0;
     }
 
     public static int getIslandPrestigeByPlayer(Player p){
-        return getInformationByNameInt(getIslandNameByPlayer(p.getName()), "t_island", "prestige_level");
+        return 0;
     }
 
     public static int getIslandPrestigeByIslandName(String islandName){
-        return getInformationByNameInt(islandName, "t_island", "prestige_level");
+        return 0;
     }
 
     public static int getIslandIdByIslandName(String islandName){
-        return getInformationByNameInt(islandName, "t_island", "id");
+        return 0;
     }
 
     public static int getIslandIdByPlayer(String player){
-        return getInformationByNameInt(getIslandNameByPlayer(player), "t_island", "id");
+        return 0;
     }
 
     public static ArrayList<String> getIslandPlayers(String islandName){
@@ -274,26 +301,15 @@ public class MySQL {
     }
 
     public static Location getObLocationByIslandName(String isName){
-        return new Location(Bukkit.getWorld("islands"), getInformationByNameInt(isName, "t_island", "oneblock_x"), getInformationByNameInt(isName, "t_island", "oneblock_y"), getInformationByNameInt(isName, "t_island", "oneblock_z"));
+        return new Location(Bukkit.getWorld("wosrld"), 0, 0, 0);
     }
 
     public static Location getSpawnLocationByIslandName(String isName){
-        return new Location(Bukkit.getWorld("islands"), getInformationByNameInt(isName, "t_island", "spawn_x"), getInformationByNameInt(isName, "t_island", "spawn_y"), getInformationByNameInt(isName, "t_island", "spawn_z"));
-    }
-
-    public static Location getCenterLocationByIslandName(String isName){
-        return new Location(Bukkit.getWorld("islands"), getInformationByNameInt(isName, "t_island", "center_x"), getInformationByNameInt(isName, "t_island", "center_y"), getInformationByNameInt(isName, "t_island", "center_z"));
+        return new Location(Bukkit.getWorld("wosrld"), 0, 0, 0);
     }
 
     public static int howManyPlayersHasIsland(String islandName){
-        int nbr = 0;
-        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
-            ResultSet result = statement.executeQuery("SELECT COUNT(*) AS nbr FROM t_user WHERE island_id=" + getInformationByNameInt(islandName, "t_island", "id") + ";");
-            while(result.next()){
-                nbr = result.getInt("nbr");
-            }
-        }catch(Exception e){}
-        return nbr;
+        return 0;
     }
 
     public static ArrayList<Location> getWellsList(String islandName){
@@ -385,15 +401,15 @@ public class MySQL {
     }
 
     public static int getObQuestNbr(String islandName){
-        return getInformationByNameInt(islandName, "t_island", "completed_daily_objective_number");
+        return 0;
     }
 
     public static int getObBankMoney(String islandName){
-        return getInformationByNameInt(islandName, "t_island", "bank");
+        return 0;
     }
 
     public static int getActivePrestige(String islandName){
-        return getInformationByNameInt(islandName, "t_island", "active_prestige");
+        return 0;
     }
 
     public static boolean alterBankSold(String islandName, long value, int operation){
@@ -653,102 +669,6 @@ public class MySQL {
     // =========================================================================================
     //                             CONNECTION & DECONNEXION DE LA DB
     // =========================================================================================
-
-    public static void initDatabase() {
-        //creation du shema de la bdd automatique, utilisation de ALTER ADD pour prévoir des ajouts futurs de nouvelles tables ou champs de tables à la bdd
-        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
-            //création de la table des iles
-            try{statement.execute("CREATE TABLE t_island (id INT NOT NULL AUTO_INCREMENT PRIMARY KEY);");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD name VARCHAR(500) NOT NULL UNIQUE;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD prestige_level INT NOT NULL DEFAULT 1;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD active_prestige INT NOT NULL DEFAULT 1;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD completed_daily_objective_number INT NOT NULL DEFAULT 0;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD level FLOAT NOT NULL DEFAULT 0;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD ob_time_break INT NOT NULL DEFAULT 0;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD active_phase VARCHAR(100) NOT NULL DEFAULT \"Plaine\";");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD center_x INT NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD center_y INT NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD center_z INT NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD oneblock_x INT NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD oneblock_y INT NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD oneblock_z INT NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD spawn_x INT NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD spawn_y INT NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD spawn_z INT NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD allow_visitors INT NOT NULL DEFAULT TRUE;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD bank BIGINT DEFAULT 0;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD perm_break_block VARCHAR(4) DEFAULT \"1110\";");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD perm_place_block VARCHAR(4) DEFAULT \"1110\";");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD perm_manage_permissions VARCHAR(4) DEFAULT \"1000\";");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD perm_manage_settings VARCHAR(4) DEFAULT \"1000\";");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD perm_invite_player VARCHAR(4) DEFAULT \"1100\";");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD perm_kick_player VARCHAR(4) DEFAULT \"1100\";");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD perm_place_shop VARCHAR(4) DEFAULT \"1110\";");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD perm_bank_withdraw VARCHAR(4) DEFAULT \"1000\";");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD perm_bank_deposit VARCHAR(4) DEFAULT \"1110\";");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD perm_promote_player VARCHAR(4) DEFAULT \"1000\";");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD perm_remote_player VARCHAR(4) DEFAULT \"1000\";");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD perm_place_warps VARCHAR(4) DEFAULT \"1100\";");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD perm_remove_warps VARCHAR(4) DEFAULT \"1100\";");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD perm_upgrade_prestige VARCHAR(4) DEFAULT \"1100\";");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD perm_upgrade_phase VARCHAR(4) DEFAULT \"1100\";");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD perm_select_prestige VARCHAR(4) DEFAULT \"1100\";");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island ADD perm_select_phase VARCHAR(4) DEFAULT \"1100\";");}catch(Exception e){}
-            //création de la table des joueurs
-            try{statement.execute("CREATE TABLE t_user (name VARCHAR(20));");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_user ADD island_id INT NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_user ADD user_island_grade INT DEFAULT 1;");}catch(Exception e){}
-            //création de la table des invitations d'is
-            try{statement.execute("CREATE TABLE t_pending_island_invite (name VARCHAR(20) NOT NULL);");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_pending_island_invite ADD island_name VARCHAR(50) NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_pending_island_invite ADD island_invitation_sender VARCHAR(20) NOT NULL;");}catch(Exception e){}
-            //création de la table des island warps
-            try{statement.execute("CREATE TABLE t_island_warp (name VARCHAR(50) NOT NULL);");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island_warp ADD island_id INT NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island_warp ADD warp_x INT NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island_warp ADD warp_y INT NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island_warp ADD warp_z INT NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island_warp ADD yaw INT NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island_warp ADD pitch INT NOT NULL;");}catch(Exception e){}
-            //création de la table des island ban
-            try{statement.execute("CREATE TABLE t_island_ban (island_id INT NOT NULL);");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island_ban ADD banned_player VARCHAR(20);");}catch(Exception e){}
-            //création de la table des puits
-            try{statement.execute("CREATE TABLE t_wells (island_name VARCHAR(500) NOT NULL);");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_wells ADD material VARCHAR(100) NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_wells ADD number INT DEFAULT 1;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_wells ADD x INT NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_wells ADD y INT NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_wells ADD z INT NOT NULL;");}catch(Exception e){}
-            //création de la table des holograms
-            try{statement.execute("CREATE TABLE t_holo (x FLOAT NOT NULL);");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_holo ADD y FLOAT NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_holo ADD z FLOAT NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_holo ADD world VARCHAR(100) NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_holo ADD type VARCHAR(100) NOT NULL;");}catch(Exception e){}
-            //création de la table des quêtes journalières
-            try{statement.execute("CREATE TABLE t_island_daily_quest (island_id INT NOT NULL);");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island_daily_quest ADD day INT NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island_daily_quest ADD month INT NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island_daily_quest ADD number INT DEFAULT 0;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island_daily_quest ADD quest_id INT DEFAULT 0;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island_daily_quest ADD completed INT DEFAULT 0;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island_daily_quest ADD rewarded INT DEFAULT 0;");}catch(Exception e){}
-            //création de la tables des is shop
-            try{statement.execute("CREATE TABLE t_island_shop (island_name varchar(500) NOT NULL);");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island_shop ADD chest_x INT NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island_shop ADD chest_y INT NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island_shop ADD chest_z INT NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island_shop ADD sign_direction VARCHAR(100) NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island_shop ADD price INT NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island_shop ADD item VARCHAR(15000) NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island_shop ADD buy_or_sell TINYINT NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island_shop ADD floating_armostand_id INT NOT NULL;");}catch(Exception e){}
-            try{statement.execute("ALTER TABLE t_island_shop ADD floating_item_id INT NOT NULL;");}catch(Exception e){}
-        }catch(Exception e){
-            throw new RuntimeException(e);
-        }
-    }
 
     public void connect(String host, int port, String database, String user, String password){
         if(!isConnected()){

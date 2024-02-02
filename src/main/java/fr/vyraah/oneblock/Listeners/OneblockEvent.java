@@ -470,24 +470,26 @@ public class OneblockEvent implements Listener {
             p.sendMessage(Main.prefix + "§4L'ile sur laquelle vous étiez lors de votre deconnection a été supprimée !\n" + Main.prefix + "§2Vous avez été téleporté au spawn");
             return;
         }
-        int prestigeLvl = MySQL.getInformationByNameInt(islandName, "t_island", "prestige_level");
-        int x = MySQL.getInformationByNameInt(islandName, "t_island", "center_x");
-        int y = MySQL.getInformationByNameInt(islandName, "t_island", "center_y");
-        int z = MySQL.getInformationByNameInt(islandName, "t_island", "center_z");
-        Location loc = new Location(Bukkit.getWorld("islands"), x, y, z);
-        int borderSize = switch(prestigeLvl){
-            case 2 -> 100;
-            case 3 -> 150;
-            case 4 -> 250;
-            case 5 -> 400;
-            default -> 50;
-        };
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                Main.INSTANCE.worldBorderApi.setBorder(p, borderSize, loc);
-            }
-        }.runTaskLater(Main.INSTANCE, 0);
+        int prestigeLvl = MySQL.getIslandPrestigeByPlayer(p);
+        try{
+            Location loc = MySQL.getCenterLocationByIslandName(islandName);
+            int borderSize = switch(prestigeLvl){
+                case 2 -> 100;
+                case 3 -> 150;
+                case 4 -> 250;
+                case 5 -> 400;
+                default -> 50;
+            };
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    Main.INSTANCE.worldBorderApi.setBorder(p, borderSize, loc);
+                }
+            }.runTaskLater(Main.INSTANCE, 0);
+        }catch(RuntimeException ex){
+            p.sendMessage("§4" + ex);
+            p.teleport(Main.spawn);
+        }
     }
 
     @EventHandler

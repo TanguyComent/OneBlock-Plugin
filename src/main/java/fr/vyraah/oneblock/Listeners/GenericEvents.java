@@ -55,7 +55,7 @@ public class GenericEvents implements Listener {
                     }
                 }
                 //delete island BDD
-                int islandId = MySQL.getInformationByNameInt(MySQL.getIslandNameByPlayer(p.getName()), "t_island", "id");
+                int islandId = MySQL.getIslandIdByPlayer(p.getName());
                 try(Statement statement = Main.INSTANCE.mysql.getConnection().createStatement()){
                     statement.execute(String.format("DELETE FROM t_island WHERE id=%d;", islandId));
                     statement.execute(String.format("DELETE FROM t_user WHERE island_id=%d;", islandId));

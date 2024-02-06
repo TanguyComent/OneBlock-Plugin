@@ -15,6 +15,7 @@ import org.bukkit.craftbukkit.v1_18_R2.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
+import javax.xml.transform.Result;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -255,48 +256,99 @@ public class MySQL {
     }
 
     public static int getPlayerGrade(String playerName){
-        return 0;
+        String sql = "SELECT gradeHierarchy FROM PLAYER p INNER JOIN GRADE g ON p.gradeId = g.gradeId WHERE playerName = ?";
+        try(PreparedStatement ps = Main.INSTANCE.mysql.getConnection().prepareStatement(sql)){
+            ps.setString(1, playerName);
+            ResultSet res = ps.executeQuery();
+            if(res.next()) return res.getInt(1);
+        }catch(SQLException e){
+            e.printStackTrace();
+        }
+        return -1;
     }
 
     public static int getIslandLevelByPlayer(Player p){
-        return 0;
+        String sql = "SELECT islandLevel FROM ISLAND i INNER JOIN PLAYER p ON i.islandId = p.islandId WHERE playerUUID = ?";
+        try(PreparedStatement ps = Main.INSTANCE.mysql.getConnection().prepareStatement(sql)){
+            ps.setString(1, p.getUniqueId().toString());
+            ResultSet res = ps.executeQuery();
+            if(res.next()) return res.getInt(1);
+        }catch (SQLException e){
+            e.printStackTrace();
+        }
+        return -1;
     }
 
     public static int getIslandPrestigeByPlayer(Player p){
-        return 0;
+        String sql = "SELECT islandPrestige FROM ISLAND i INNER JOIN PLAYER p ON i.islandId = p.islandId WHERE playerUUID = ?";
+        try(PreparedStatement ps = Main.INSTANCE.mysql.getConnection().prepareStatement(sql)){
+            ps.setString(1, p.getUniqueId().toString());
+            ResultSet res = ps.executeQuery();
+            if(res.next()) return res.getInt(1);
+        }catch (SQLException e){
+            e.printStackTrace();
+        }
+        return -1;
     }
 
     public static int getIslandPrestigeByIslandName(String islandName){
-        return 0;
+        String sql = "SELECT islandPrestige FROM ISLAND WHERE islandName = ?";
+        try(PreparedStatement ps = Main.INSTANCE.mysql.getConnection().prepareStatement(sql)){
+            ps.setString(1, islandName);
+            ResultSet res = ps.executeQuery();
+            if(res.next()) return res.getInt(1);
+        }catch (SQLException e){
+            e.printStackTrace();
+        }
+        return -1;
     }
 
     public static int getIslandIdByIslandName(String islandName){
-        return 0;
+        String sql = "SELECT islandId FROM ISLAND WHERE islandName = ?";
+        try(PreparedStatement ps = Main.INSTANCE.mysql.getConnection().prepareStatement(sql)){
+            ps.setString(1, islandName);
+            ResultSet res = ps.executeQuery();
+            if(res.next()) return res.getInt(1);
+        }catch (SQLException e){
+            e.printStackTrace();
+        }
+        return -1;
     }
 
     public static int getIslandIdByPlayer(String player){
-        return 0;
+        String sql = "SELECT islandId FROM PLAYER WHERE playerName = ?";
+        try(PreparedStatement ps = Main.INSTANCE.mysql.getConnection().prepareStatement(sql)){
+            ps.setString(1, player);
+            ResultSet res = ps.executeQuery();
+            if(res.next()) return res.getInt(1);
+        }catch (SQLException e){
+            e.printStackTrace();
+        }
+        return -1;
     }
 
     public static ArrayList<String> getIslandPlayers(String islandName){
+        int islandId = getIslandIdByIslandName(islandName);
         ArrayList<String> players = new ArrayList<>();
-        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
-            ResultSet result = statement.executeQuery("SELECT * FROM t_user WHERE island_id=" + getIslandIdByIslandName(islandName) + ";");
-            while(result.next()){
-                players.add(result.getString("name"));
-            }
-        }catch (Exception e){}
+        String sql = "SELECT playerName FROM PLAYER WHERE islandId = ?";
+        try(PreparedStatement ps = Main.INSTANCE.mysql.getConnection().prepareStatement(sql)){
+            ps.setInt(1, islandId);
+            ResultSet result = ps.executeQuery();
+            while(result.next()) players.add(result.getString(1));
+        }catch(SQLException e){
+            e.printStackTrace();
+        }
         return players;
     }
 
     public static ArrayList<String> getIslandWarpsName(){
         ArrayList<String> warps = new ArrayList<>();
-        try(Statement statement = Main.INSTANCE.mysql.conn.createStatement()){
-            ResultSet result = statement.executeQuery("SELECT name FROM t_island_warp");
-            while (result.next()){
-                warps.add(result.getString("name"));
-            }
-        }catch (Exception e){}
+        try(PreparedStatement ps = Main.INSTANCE.mysql.getConnection().prepareStatement("SELECT warpName FROM WARP")){
+            ResultSet result = ps.executeQuery();
+            while(result.next()) warps.add(result.getString(1));
+        }catch (SQLException e){
+            e.printStackTrace();
+        }
         return warps;
     }
 

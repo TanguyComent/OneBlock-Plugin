@@ -353,14 +353,42 @@ public class MySQL {
     }
 
     public static Location getObLocationByIslandName(String isName){
-        return new Location(Bukkit.getWorld("wosrld"), 0, 0, 0);
+        String sql = "SELECT islandOneBlockX as x, islandOneBlockY as y, islandOneBlockZ as z FROM ISLAND WHERE islandName = ?";
+        try(PreparedStatement ps = Main.INSTANCE.mysql.getConnection().prepareStatement(sql)){
+            ps.setString(1, isName);
+            ResultSet result = ps.executeQuery();
+            if(result.next()){
+                return new Location(Bukkit.getWorld("islands"), result.getInt("x"), result.getInt("y"), result.getInt("z"));
+            }
+        }catch (SQLException e){
+            e.printStackTrace();
+        }
+        return null;
     }
 
     public static Location getSpawnLocationByIslandName(String isName){
-        return new Location(Bukkit.getWorld("wosrld"), 0, 0, 0);
+        String sql = "SELECT islandSpawnX as x, islandSpawnY as y, islandSpawnZ as z FROM ISLAND WHERE islandName = ?";
+        try(PreparedStatement ps = Main.INSTANCE.mysql.getConnection().prepareStatement(sql)){
+            ps.setString(1, isName);
+            ResultSet result = ps.executeQuery();
+            if(result.next()){
+                return new Location(Bukkit.getWorld("islands"), result.getInt("x"), result.getInt("y"), result.getInt("z"));
+            }
+        }catch (SQLException e){
+            e.printStackTrace();
+        }
+        return null;
     }
 
     public static int howManyPlayersHasIsland(String islandName){
+        String sql = "SELECT COUNT(*) AS nbP FROM PLAYER p INNER JOIN ISLAND i ON p.islandId = i.islandId WHERE islandName = ? ";
+        try(PreparedStatement ps = Main.INSTANCE.mysql.getConnection().prepareStatement(sql)){
+            ps.setString(1, islandName);
+            ResultSet result = ps.executeQuery();
+            if(result.next()) return result.getInt("nbP");
+        }catch (SQLException e){
+            e.printStackTrace();
+        }
         return 0;
     }
 

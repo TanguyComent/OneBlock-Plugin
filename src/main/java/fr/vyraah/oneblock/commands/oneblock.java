@@ -121,6 +121,7 @@ public class oneblock implements CommandExecutor {
                         p.sendMessage(Main.prefix + ChatColor.RED + "Cette ile existe deja, veuiller choisir un autre nom !");
                     }catch(Exception e){
                         p.sendMessage(Main.prefix + ChatColor.RED + "ERREUR INCONNUE : votre ile n'a pas pu etre cree veuillez reessayer");
+                        e.printStackTrace();
                         return false;
                     }
 
@@ -149,55 +150,54 @@ public class oneblock implements CommandExecutor {
                         p.sendMessage(Main.prefix + "§4Mauvaise utilisation /is invite <joueur>");
                         return false;
                     }
-                    if(MySQL.getIslandPrestigeByPlayer(p) == 1){
-                        if(MySQL.howManyPlayersHasIsland(MySQL.getIslandNameByPlayer(p.getName())) >= 5){
-                            p.sendMessage(Main.prefix + "§4Votre ile est pleine, vous devez augmenter votre niveau de prestige pour augmenter le nombre de joueur qu'une ile peut accueillir");
-                            return false;
-                        }
-                    }else if(MySQL.getIslandPrestigeByPlayer(p) == 2){
-                        if(MySQL.howManyPlayersHasIsland(MySQL.getIslandNameByPlayer(p.getName())) >= 6){
-                            p.sendMessage(Main.prefix + "§4Votre ile est pleine, vous devez augmenter votre niveau de prestige pour augmenter le nombre de joueur qu'une ile peut accueillir");
-                            return false;
-                        }
-                    }else if(MySQL.getIslandPrestigeByPlayer(p) == 3){
-                        if(MySQL.howManyPlayersHasIsland(MySQL.getIslandNameByPlayer(p.getName())) >= 7){
-                            p.sendMessage(Main.prefix + "§4Votre ile est pleine, vous devez augmenter votre niveau de prestige pour augmenter le nombre de joueur qu'une ile peut accueillir");
-                            return false;
-                        }
-                    }else if(MySQL.getIslandPrestigeByPlayer(p) == 4){
-                        if(MySQL.howManyPlayersHasIsland(MySQL.getIslandNameByPlayer(p.getName())) >= 8){
-                            p.sendMessage(Main.prefix + "§4Votre ile est pleine, vous devez augmenter votre niveau de prestige pour augmenter le nombre de joueur qu'une ile peut accueillir");
-                            return false;
-                        }
-                    }else if(MySQL.getIslandPrestigeByPlayer(p) == 5){
-                        if(MySQL.howManyPlayersHasIsland(MySQL.getIslandNameByPlayer(p.getName())) >= 9){
-                            p.sendMessage(Main.prefix + "§4Votre ile est pleine.");
-                            return false;
-                        }
-                    }
+
                     if(!MySQL.getPlayerHaveAnIsland(p)){
                         if(args.length == 2){
                             if(args[1].equalsIgnoreCase("list")){
                                 //affiche la liste des invitations du joueur
-                                try {
-                                    Statement statement = Main.INSTANCE.mysql.getConnection().createStatement();
-                                    ResultSet result = statement.executeQuery("SELECT * FROM t_pending_island_invite WHERE name=\"" + p.getName() + "\";");
-                                    ArrayList<String> invitations = new ArrayList<>();
-                                    while(result.next()){
-                                        invitations.add(Main.prefix + ChatColor.GOLD + result.getString("island_invitation_sender") + ChatColor.GREEN + " t'as invité à rejoindre son ile (" + ChatColor.GOLD +  result.getString("island_name") + ChatColor.GREEN + "§2)");
-                                    }
-                                    p.sendMessage(Main.prefix + ChatColor.BLUE + "Liste de tes invitations :");
-                                    if(invitations.size() == 0) invitations.add(Main.prefix + ChatColor.GREEN + "Vous n'avez aucune invitation");
-                                    for(String msg : invitations){
-                                        p.sendMessage(msg);
-                                    }
-                                }catch(Exception e){}
 
+                                ArrayList<String> invitations = MySQL.getIslandInvite(p);
+                                p.sendMessage(Main.prefix + ChatColor.BLUE + "Liste de tes invitations :");
+                                if(invitations.size() == 0) p.sendMessage(Main.prefix + ChatColor.GREEN + "Vous n'avez aucune invitation");
+                                for(String msg : invitations){
+                                    p.sendMessage(msg);
+                                }
                                 return true;
                             }
                         }
                         p.sendMessage(Main.prefix + ChatColor.RED + "Il te faut une ile pour pouvoir inviter des joueurs ! Commence par faire /is create <nom>");
                         return false;
+                    }
+
+                    String playerIsland = MySQL.getIslandNameByPlayer(p.getName());
+                    int islandPrestigeLvl = MySQL.getIslandPrestigeByPlayer(p),
+                        islandMemberCount = MySQL.howManyPlayersHasIsland(playerIsland);
+
+                    if(islandPrestigeLvl == 1){
+                        if(islandMemberCount >= 5){
+                            p.sendMessage(Main.prefix + "§4Votre ile est pleine, vous devez augmenter votre niveau de prestige pour augmenter le nombre de joueur qu'une ile peut accueillir");
+                            return false;
+                        }
+                    }else if(islandPrestigeLvl == 2){
+                        if(islandMemberCount >= 6){
+                            p.sendMessage(Main.prefix + "§4Votre ile est pleine, vous devez augmenter votre niveau de prestige pour augmenter le nombre de joueur qu'une ile peut accueillir");
+                            return false;
+                        }
+                    }else if(islandPrestigeLvl == 3){
+                        if(islandMemberCount >= 7){
+                            p.sendMessage(Main.prefix + "§4Votre ile est pleine, vous devez augmenter votre niveau de prestige pour augmenter le nombre de joueur qu'une ile peut accueillir");
+                            return false;
+                        }
+                    }else if(islandPrestigeLvl == 4){
+                        if(islandMemberCount >= 8){
+                            p.sendMessage(Main.prefix + "§4Votre ile est pleine, vous devez augmenter votre niveau de prestige pour augmenter le nombre de joueur qu'une ile peut accueillir");
+                            return false;
+                        }
+                    }else if(islandPrestigeLvl == 5){
+                        if(islandMemberCount >= 9){
+                            p.sendMessage(Main.prefix + "§4Votre ile est pleine.");
+                            return false;
+                        }
                     }
 
                     //check if player has island permission to invite player into
@@ -232,14 +232,16 @@ public class oneblock implements CommandExecutor {
                     }
 
                     //enregistrement de l'invitation dans la bdd
-                    try(Statement statement = Main.INSTANCE.mysql.getConnection().createStatement()){
-                        statement.execute(String.format("""
-                                INSERT INTO t_pending_island_invite (name, island_name, island_invitation_sender)
-                                VALUES ("%s", "%s", "%s");
-                                """, target.getName(), MySQL.getIslandNameByPlayer(p.getName()), p.getName()));
+                    try{
+                        MySQL.invitePlayerToIsland(playerIsland, target);
                         p.sendMessage(Main.prefix + ChatColor.GREEN + "Le joueur " + target.getName() + " a bien été inviter sur votre ile !");
-                    } catch (SQLException e) {
-                        p.sendMessage(Main.prefix + ChatColor.RED + "Une erreur est survenue");
+                    }catch(RuntimeException e) {
+                        if(e.getMessage().equals("AlreadyInvited")){
+                            p.sendMessage(Main.prefix + ChatColor.RED + " " + targetName + " a deja été invité a rejoindre ton ile");
+                        }else{
+                            p.sendMessage(Main.prefix + ChatColor.RED + "Une erreur inconnue est survenue");
+                            e.printStackTrace();
+                        }
                         return false;
                     }
                 }
@@ -285,8 +287,27 @@ public class oneblock implements CommandExecutor {
                     }
 
                     String target = args[1];
+                    boolean isTargetPlayer = true;
+                    int islandId;
 
-                    //A refaire
+                    try{
+                        Player t = Bukkit.getPlayer(target);
+                    }catch (Exception e){
+                        isTargetPlayer = false;
+                    }
+
+                    if(isTargetPlayer){
+                        islandId = MySQL.getIslandIdByPlayer(target);
+                    }else{
+                        islandId = MySQL.getIslandIdByIslandName(target);
+                    }
+
+                    if(!MySQL.hasInvitation(p.getUniqueId(), islandId)){
+                        p.sendMessage(Main.prefix + "§4Tu n'as pas d'invitation pour rejoindre cette ile !");
+                        return false;
+                    }
+
+                    MySQL.addPlayerToIsland(p, islandId, 4);
                 }
 
                 // CMD : /is phase
@@ -397,7 +418,7 @@ public class oneblock implements CommandExecutor {
                             }
                         }
                     }
-                    ArrayList<ArrayList<Object>> wells = MySQL.getWellsInformation(MySQL.getIslandNameByPlayer(p.getName()));
+                    ArrayList<ArrayList<Object>> wells = MySQL.getWellsInformation(MySQL.getIslandIdByPlayer(p.getName()));
                     wells.forEach((wls) -> {
                         Material mat = Material.getMaterial((String) wls.get(0));
                         int amount = (int) wls.get(1) - 1;
@@ -521,8 +542,8 @@ public class oneblock implements CommandExecutor {
     }
 
     public static void teleportPlayerToIsland(Player p, String islandName){
-        Location loc = new Location(Bukkit.getWorld("islands"), 0, 0 + 2, 0); // recuperer la loc de spawn de l'ile
-        p.teleport(loc);
+        Location loc = MySQL.getSpawnLocationByIslandName(islandName); // recuperer la loc de spawn de l'ile
+        p.teleport(loc.add(.5, 2, .5));
         int borderSize = Main.INSTANCE.radiusLevel.get(MySQL.getIslandPrestigeByIslandName(islandName))*2;
         Main.INSTANCE.worldBorderApi.setBorder(p, borderSize, loc);
     }
@@ -535,7 +556,7 @@ public class oneblock implements CommandExecutor {
         holo.setCustomName("§6Les §ameilleurs iles §6du server !");
         holo.setCustomNameVisible(true);
         holo.setVisible(false);
-        ArrayList<ArrayList<Object>> isTop = MySQL.getIslandTop();
+        ArrayList<ArrayList<Object>> isTop = MySQL.getIslandTop(10);
         for(int i = 0; i <= 9; i++){
             ArmorStand top = (ArmorStand) location.getWorld().spawnEntity(location.add(0, -.3, 0), EntityType.ARMOR_STAND);
             top.setGravity(false);

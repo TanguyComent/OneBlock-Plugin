@@ -8,13 +8,10 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.Ageable;
 import org.bukkit.entity.*;
-import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.CraftItemEvent;
@@ -28,8 +25,14 @@ public class QuestEvent implements Listener {
 
     @EventHandler
     public static void onConnect(PlayerLoginEvent e){
-        if(MySQL.getPlayerHaveAnIsland(e.getPlayer()))
-            MySQL.updateQuest(MySQL.getIslandNameByPlayer(e.getPlayer().getName()));
+        Player p = e.getPlayer();
+        p.sendMessage("OKOK");
+        if(MySQL.playerFirstConnexion(p)) {
+            MySQL.registerPlayer(p);
+        }
+        if(MySQL.getPlayerHaveAnIsland(p))
+            MySQL.updateQuest(MySQL.getIslandNameByPlayer(p.getName()));
+
     }
 
     @EventHandler

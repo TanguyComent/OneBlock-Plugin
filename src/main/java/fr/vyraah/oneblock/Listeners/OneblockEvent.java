@@ -55,10 +55,8 @@ public class OneblockEvent implements Listener {
                     p.sendMessage(Main.prefix + "§2Vous avez complété votre quête d'ile journalière ! §e/is quest §2pour récupérer votre récompense !");
                 }
             }
-            try(Statement statement = Main.INSTANCE.mysql.getConnection().createStatement()){
-                int newTimeBreak = MySQL.getObTimesBreak(islandName) + 1;
-                statement.execute("UPDATE t_island SET ob_time_break=" + newTimeBreak + " WHERE name='" + islandName + "';");
-            }catch(Exception ex){throw new RuntimeException(ex);}
+            int newTimeBreak = MySQL.getObTimesBreak(islandName) + 1;
+            MySQL.updateObTimesBreak(newTimeBreak, islandName);
             for(ItemStack it : bl.getDrops(p.getInventory().getItemInMainHand())){
                 if(it.getType() != Material.AIR)
                     Bukkit.getWorld("islands").dropItem(new Location(bl.getWorld(), bl.getX(), bl.getY() + 1, bl.getZ()), it);
